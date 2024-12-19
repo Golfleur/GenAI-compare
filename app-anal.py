@@ -1,8 +1,8 @@
-import yaml
 import os
-import requests
 import json
-from collections import defaultdict
+import argparse
+import requests
+import yaml
 
 def load_connect_owui(file_path):
     with open(file_path, 'r') as file:
@@ -13,124 +13,87 @@ API_KEY = config['open_webui']['api_key']
 BASE_URL = config['open_webui']['location']
 API_URL = f"{BASE_URL}/api/chat/completions"
 
-# Directory paths
 questions_dir = './questions'
+answers_dir = './answers'
 targets_dir = './targets'
 analysis_dir = './analysis'
-models = ['gemini_test.gemini-1.5-flash-latest', 
-            'anthropic.claude-3-5-haiku-latest',
-            'gpt-4o-mini',
-            'llama3.2:latest']
 
-# Read the content of the file
 def read_file_content(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         return file.read().strip()
-        
-def read_json_file(filepath):
-    with open(filepath, 'r', encoding='utf-8') as f:
-        return json.load(f)
 
-# Function to get response from the Open WebUI API
-def get_model_response(model, question):
+def read_json_file(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return json.load(file)
+
+def get_analysis_response(question, candidate_answer, target_answer):
     headers = {
         'Authorization': f'Bearer {API_KEY}',
         'Content-Type': 'application/json'
     }
     data = {
-        'model': model,
-        'messages': [{'role': 'user', 'content': question}]
+        'model': 'gpt-4o',
+        'messages': [
+            {'role': 'system', 'content': "You're a helpful assistant that evaluates answers."},
+            {'role': 'user', 'content': f"Question: {question}\nCandidate Answer: {candidate_answer}\nExpected Target Answer: {target_answer}\nPlease evaluate the similarity and completeness."}
+        ]
     }
     try:
         response = requests.post(API_URL, headers=headers, json=data)
         response.raise_for_status()
         return response.json()['choices'][0]['message']['content']
     except requests.exceptions.RequestException as e:
-        print(f"Error with API request for model {model}: {e}")
-        return ""
+        print(f"Error with API request: {e}")
+        return "Error in API request"
 
-def analyze_response(response, target):
-    score = 0
-    analysis = []
-    
-    # Check for crucial information
-    if target['infos_cruciales'].lower() in response.lower():
-        score += 2
-        analysis.append("Contains crucial information")
-    else:
-        analysis.append("Missing crucial information")
-
-    # Check for information to avoid
-    if target['infos_a_eviter'].lower() in response.lower():
-        score -= 1
-        analysis.append("Contains information to avoid")
-    else:
-        score += 1
-        analysis.append("Properly avoids incorrect information")
-
-    # Check alignment with target response
-    if any(phrase.lower() in response.lower() for phrase in target['reponse_cible'].split()):
-        score += 1
-        analysis.append("Aligns with target response")
-
-    return {
-        'score': score,
-        'analysis': analysis
-    }
-
-
-# Run the analysis process
-def main():
+def main(verbose=False):
     os.makedirs(analysis_dir, exist_ok=True)
-    overall_scores = defaultdict(int)
 
     for question_file in os.listdir(questions_dir):
         if question_file.endswith('.q'):
             base_name = question_file[:-2]
-
             question_path = os.path.join(questions_dir, question_file)
+            answer_path = os.path.join(answers_dir, question_file.replace('.q', '.a'))
             target_path = os.path.join(targets_dir, question_file.replace('.q', '.t'))
-            
+
             question = read_file_content(question_path)
-            target = read_json_file(target_path)
-            
+            target_data = read_json_file(target_path)
+            target_answer = target_data['reponse_cible']
+            infos_cruciales = target_data.get('infos_cruciales', '')
+            infos_a_eviter = target_data.get('infos_a_eviter', '')
+
+            # Prepare the report for each question analyzed
             report = f"Analysis for {base_name}\n"
             report += f"Question: {question}\n\n"
-            
-            model_rankings = []
-            for model in models:
-                response = get_model_response(model, question)
-                analysis_result = analyze_response(response, target)
-                
-                model_rankings.append((model, analysis_result['score']))
-                overall_scores[model] += analysis_result['score']
-                
+
+            # Load answers from the JSON structure
+            answers_data = read_json_file(answer_path)
+
+            for model, model_data in answers_data.items():
+                answer_text = model_data['choices'][0]['message']['content']
+
+                # Use GPT-4o to analyze the answer
+                api_response = get_analysis_response(question, answer_text, target_answer)
+
+                # Constructing report for the model's performance
                 report += f"\nModel: {model}\n"
-                report += f"Score: {analysis_result['score']}\n"
-                report += "Analysis:\n"
-                for point in analysis_result['analysis']:
-                    report += f"- {point}\n"
-            
-            # Add ranking for this question
-            model_rankings.sort(key=lambda x: x[1], reverse=True)
-            report += "\nRankings for this question:\n"
-            for rank, (model, score) in enumerate(model_rankings, 1):
-                report += f"{rank}. {model} (score: {score})\n"
-            
-            # Save individual question analysis
+                report += f"Answer: {answer_text}\n"
+                report += f"Analysis Response: {api_response}\n"
+
+                if verbose:
+                    print(f"Processed model {model} for question {base_name}")
+
+            # Save the report
             analysis_filename = os.path.join(analysis_dir, question_file.replace('.q', '.txt'))
             with open(analysis_filename, 'w', encoding='utf-8') as f:
                 f.write(report)
-    
-    # Generate overall analysis
-    overall_report = "Overall Model Performance\n\n"
-    sorted_models = sorted(overall_scores.items(), key=lambda x: x[1], reverse=True)
-    for rank, (model, score) in enumerate(sorted_models, 1):
-        overall_report += f"{rank}. {model}: Total Score {score}\n"
-    
-    with open(f"{analysis_dir}/overall_analysis.txt", 'w', encoding='utf-8') as f:
-        f.write(overall_report)
 
+            if verbose:
+                print(f"Completed analysis for {base_name}")
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description="Run model answer analysis.")
+    parser.add_argument('--verbose', action='store_true', help="Enable verbose mode")
+    args = parser.parse_args()
+
+    main(verbose=args.verbose)
