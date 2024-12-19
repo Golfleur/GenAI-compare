@@ -26,16 +26,24 @@ def read_json_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         return json.load(file)
 
-def get_analysis_response(question, candidate_answer, target_answer):
+def get_analysis_response(question, candidate_answer, target_answer, infos_cruciales, infos_a_eviter):
     headers = {
         'Authorization': f'Bearer {API_KEY}',
         'Content-Type': 'application/json'
     }
+    prompt = (
+        f"Question: {question}\n"
+        f"Réponse du modèle: {candidate_answer}\n\n"
+        f"Réponse attendu: {target_answer}\n"
+        f"Information cruciale: {infos_cruciales}\n"
+        f"Information à éviter: {infos_a_eviter}\n"
+        f"Veuillez évaluer si la réponse du modèle inclut des informations cruciales et évite le contenu indésirable, tout en évaluant la similarité globale."
+    )
     data = {
         'model': 'gpt-4o',
         'messages': [
-            {'role': 'system', 'content': "You're a helpful assistant that evaluates answers."},
-            {'role': 'user', 'content': f"Question: {question}\nCandidate Answer: {candidate_answer}\nExpected Target Answer: {target_answer}\nPlease evaluate the similarity and completeness."}
+            {'role': 'system', 'content': "Tu fournis une évaluation en français de la qualité de la réponse par rapport à la cible."},
+            {'role': 'user', 'content': prompt}
         ]
     }
     try:
@@ -73,7 +81,9 @@ def main(verbose=False):
                 answer_text = model_data['choices'][0]['message']['content']
 
                 # Use GPT-4o to analyze the answer
-                api_response = get_analysis_response(question, answer_text, target_answer)
+                api_response = get_analysis_response(
+                    question, answer_text, target_answer, infos_cruciales, infos_a_eviter
+                )
 
                 # Constructing report for the model's performance
                 report += f"\nModel: {model}\n"
