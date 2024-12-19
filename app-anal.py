@@ -34,10 +34,10 @@ def get_analysis_response(question, candidate_answer, target_answer, infos_cruci
     prompt = (
         f"Question: {question}\n"
         f"Réponse du modèle: {candidate_answer}\n\n"
-        f"Réponse attendu: {target_answer}\n"
-        f"Information cruciale: {infos_cruciales}\n"
-        f"Information à éviter: {infos_a_eviter}\n"
-        f"Veuillez évaluer si la réponse du modèle inclut des informations cruciales et évite le contenu indésirable, tout en évaluant la similarité globale."
+        f"Attentes:\n Réponse attendue: {target_answer}\n"
+        f"Informations cruciales attendues: {infos_cruciales}\n"
+        f"Informations à éviter: {infos_a_eviter}\n"
+        f"Veuillez évaluer si la réponse du modèle inclut les informations cruciales attendues et omet le contenu à éviter, tout en évaluant la similarité globale."
     )
     data = {
         'model': 'gpt-4o',
@@ -71,8 +71,11 @@ def main(verbose=False):
             infos_a_eviter = target_data.get('infos_a_eviter', '')
 
             # Prepare the report for each question analyzed
-            report = f"Analysis for {base_name}\n"
-            report += f"Question: {question}\n\n"
+            report = f"Analyse pour {base_name}\n"
+            report += f"Question: {question}\n"
+            report += f"Réponse attendue: {target_answer}\n"
+            report += f"Informations cruciales attendues: {infos_cruciales}\n"
+            report += f"Informations à éviter: { infos_a_eviter}\n\n"
 
             # Load answers from the JSON structure
             answers_data = read_json_file(answer_path)
@@ -86,9 +89,9 @@ def main(verbose=False):
                 )
 
                 # Constructing report for the model's performance
-                report += f"\nModel: {model}\n"
-                report += f"Answer: {answer_text}\n"
-                report += f"Analysis Response: {api_response}\n"
+                report += f"\nModèle: {model}\n"
+                report += f"Réponse du modèle: {answer_text}\n"
+                report += f"Analyse de la réponse: {api_response}\n"
 
                 if verbose:
                     print(f"Processed model {model} for question {base_name}")
