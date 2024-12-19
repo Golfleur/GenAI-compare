@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>All Toutes les questions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #fff;
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        li strong {
+            font-size: 18px;
+            color: #007bff;
+        }
+        li p {
+            margin: 5px 0;
+            line-height: 1.4;
+        }
+        a {
+            display: inline-block;
+            margin-top: 10px;
+            text-decoration: none;
+            color: #007bff;
+            transition: color 0.3s;
+        }
+        a:hover {
+            color: #0056b3;
+        }
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Toutes les questions</h1>
+    <ul>
+    {% for question in questions %}
+        <li>
+            <strong>Nom court:</strong> {{ question.nom_question }}
+            <p><strong>Question:</strong> {{ question.question_content }}</p>
+            <p><strong>Réponse cible:</strong> {{ question.target_data.reponse_cible }}</p>
+            <p><strong>Infos cruciales:</strong> {{ question.target_data.infos_cruciales }}</p>
+            <p><strong>Infos à éviter:</strong> {{ question.target_data.infos_a_eviter }}</p>
+            <a href="{{ url_for('edit', nom_question=question.nom_question) }}">Editer</a>
+        </li>
+    {% else %}
+        <li>Aucune question trouvée.</li>
+    {% endfor %}
+    </ul>
+    <div class="back-link">
+        <a href="{{ url_for('index') }}">Retour à l'ajout de question</a>
+    </div>
+</body>
+</html>

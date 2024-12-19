@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestionnaire de questions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        textarea {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        textarea {
+            height: 100px; /* Adjust height as needed */
+        }
+        input[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #007bff;
+            transition: color 0.3s;
+        }
+        a:hover {
+            color: #0056b3;
+        }
+    </style> 
+</head>
+<body>
+    <h1>Ajouter une question</h1>
+    <form action="/" method="post">
+        <label for="nom_question">Nom court de la question (un mot):</label>
+        <input type="text" id="nom_question" name="nom_question" required><br>
+
+        <label for="question_content">Question:</label>
+        <textarea id="question_content" name="question_content" required></textarea><br>
+
+        <label for="reponse_cible">Réponse cible:</label>
+        <textarea id="reponse_cible" name="reponse_cible"></textarea><br>
+
+        <label for="infos_cruciales">Infos cruciales:</label>
+        <textarea id="infos_cruciales" name="infos_cruciales"></textarea><br>
+
+        <label for="infos_a_eviter">Infos à éviter:</label>
+        <textarea id="infos_a_eviter" name="infos_a_eviter"></textarea><br>
+
+        <input type="submit" value="Ajouter la question">
+    </form>
+    <br>
+    <a href="{{ url_for('questions') }}">Voir toutes les questions</a>
+</body>
+</html>
