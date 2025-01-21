@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 
 def load_connect_owui(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding="utf-8") as file:
         return yaml.safe_load(file)
     
 config = load_connect_owui('./config/connect-owui.yaml')
@@ -18,7 +18,7 @@ API_URL = f"{BASE_URL}/api/models"
 CONFIG_PATH = './config/config.yaml'
 
 def load_connect_owui(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding="utf-8") as file:
         return yaml.safe_load(file)
 
 def fetch_models():
@@ -101,7 +101,7 @@ def fetch_models():
 def load_selected_models():
     """Load selected models from the YAML configuration file."""
     if os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH, 'r') as file:
+        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
             try:
                 config = yaml.safe_load(file)
                 return config.get("selected_models", [])
@@ -113,7 +113,7 @@ def load_selected_models():
 def save_to_yaml(selected_models):
     """Save the list of selected models to a YAML file."""
     os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
-    with open(CONFIG_PATH, 'w') as file:
+    with open(CONFIG_PATH, 'w', encoding="utf-8") as file:
         yaml.dump({"selected_models": selected_models}, file)
 
 @app.route('/', methods=['GET', 'POST'])
