@@ -76,6 +76,7 @@ def main(verbose=False):
             report += f"Réponse attendue: {target_answer}\n"
             report += f"Informations cruciales attendues: {infos_cruciales}\n"
             report += f"Informations à éviter: { infos_a_eviter}\n\n"
+            report += f"*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n\n"
 
             # Load answers from the JSON structure
             answers_data = read_json_file(answer_path)
@@ -91,7 +92,9 @@ def main(verbose=False):
                 # Constructing report for the model's performance
                 report += f"\nModèle: {model}\n"
                 report += f"Réponse du modèle: {answer_text}\n"
+                report += f"|-_-|-_-|-_-|-_-|-_-|-_-|-_-|-_-|-_-|-_-|-_-|-_-|-_-|\n\n"
                 report += f"Analyse de la réponse: {api_response}\n"
+                report += f"*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n\n"
 
                 if verbose:
                     print(f"Processed model {model} for question {base_name}")
