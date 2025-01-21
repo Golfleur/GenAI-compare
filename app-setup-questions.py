@@ -1,6 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for
 import json
 import os
+import yaml
+
+# New function to save selected questions to a YAML file
+def save_selected_questions(selected_questions):
+    """Save the selected question names to a YAML file."""
+    os.makedirs('./config', exist_ok=True)  # Ensure the config directory exists
+    config_path = './config/selected_questions.yaml'
+    with open(config_path, 'w', encoding='utf-8') as file:
+        yaml.dump(selected_questions, file)
 
 app = Flask(__name__)
 
@@ -38,6 +47,35 @@ def load_target(nom_question):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+#    if request.method == 'POST':
+#        # Retrieve form data
+#        nom_question = request.form.get('nom_question')
+#        question_content = request.form.get('question_content')
+#        reponse_cible = request.form.get('reponse_cible')
+#        infos_cruciales = request.form.get('infos_cruciales')
+#        infos_a_eviter = request.form.get('infos_a_eviter')
+#
+#        # Validate nom_question for a single word identifier
+#        if not nom_question or ' ' in nom_question:
+#            return "Nom de la question doit être un seul mot", 400
+#
+#        # Save question content
+#        save_question(nom_question, question_content)
+#
+#        # Prepare and save target data in JSON
+#        target_data = {
+#            "reponse_cible": reponse_cible,
+#            "infos_cruciales": infos_cruciales,
+#            "infos_a_eviter": infos_a_eviter
+#        }
+#        save_target(nom_question, target_data)
+
+#   	 return redirect(url_for('index'))
+    
+    return render_template('index_q.html')
+
+@app.route('/add_q', methods=['GET', 'POST'])
+def add_q():
     if request.method == 'POST':
         # Retrieve form data
         nom_question = request.form.get('nom_question')
@@ -61,9 +99,9 @@ def index():
         }
         save_target(nom_question, target_data)
 
-        return redirect(url_for('index'))
+        return redirect(url_for('add_q'))
     
-    return render_template('index_q.html')
+    return render_template('add_q.html')
 
 @app.route('/questions')
 def questions():
@@ -105,6 +143,21 @@ def edit(nom_question):
     question_content = load_question(nom_question)
     target_data = load_target(nom_question)
     return render_template('edit.html', nom_question=nom_question, question_content=question_content, target_data=target_data)
+
+@app.route('/select_questions', methods=['GET', 'POST'])
+def select_questions():
+    """Select a subset of questions and save to a YAML file."""
+    if request.method == 'POST':
+        selected_questions = request.form.getlist('selected_questions')
+        save_selected_questions(selected_questions)
+        return redirect(url_for('questions'))
+    
+    # Get the list of all questions
+    question_files = os.listdir('./questions')
+    questions = [filename.split('.')[0] for filename in question_files]
+
+    return render_template('select_questions.html', questions=questions)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

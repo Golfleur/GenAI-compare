@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Editeur de question</title>
+    <title>Gestionnaire de questions</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -60,26 +60,29 @@
         a:hover {
             color: #0056b3;
         }
-    </style>
+    </style> 
 </head>
 <body>
-    <h1>Editeur de question: {{ nom_question }}</h1>
-    <form action="{{ url_for('edit', nom_question=nom_question) }}" method="post">
+    <h1>Ajouter une question</h1>
+    <form action="/" method="post">
+        <label for="nom_question">Nom court de la question (un mot):</label>
+        <input type="text" id="nom_question" name="nom_question" required><br>
+
         <label for="question_content">Question:</label>
-        <textarea id="question_content" name="question_content" required>{{ question_content }}</textarea><br>
+        <textarea id="question_content" name="question_content" required></textarea><br>
 
         <label for="reponse_cible">Réponse cible:</label>
-        <textarea id="reponse_cible" name="reponse_cible">{{ target_data.reponse_cible }}</textarea><br>
+        <textarea id="reponse_cible" name="reponse_cible"></textarea><br>
 
         <label for="infos_cruciales">Infos cruciales:</label>
-        <textarea id="infos_cruciales" name="infos_cruciales">{{ target_data.infos_cruciales }}</textarea><br>
+        <textarea id="infos_cruciales" name="infos_cruciales"></textarea><br>
 
         <label for="infos_a_eviter">Infos à éviter:</label>
-        <textarea id="infos_a_eviter" name="infos_a_eviter">{{ target_data.infos_a_eviter }}</textarea><br>
+        <textarea id="infos_a_eviter" name="infos_a_eviter"></textarea><br>
 
-        <input type="submit" value="Mettre à jour la question">
+        <input type="submit" value="Ajouter la question">
     </form>
     <br>
-    <a href="{{ url_for('questions') }}">Retour à l'acceuil</a>
+    <a href="{{ url_for('index') }}">Retour au menu</a>
 </body>
 </html>

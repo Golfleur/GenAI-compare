@@ -118,7 +118,20 @@ def write_answers(file_name, answers, verbose):
 def process_question_files(verbose):
     """Process all question files with all models."""
     os.makedirs(ANSWERS_FOLDER, exist_ok=True)
-    
+
+
+    # Load the list of selected questions from the YAML file
+    config_yaml_path = './config/selected_questions.yaml'
+    try:
+        with open(config_yaml_path, 'r', encoding='utf-8') as stream:
+            selected_questions = yaml.safe_load(stream) or []
+            if verbose:
+                print(f"Loaded selected questions: {selected_questions}")
+    except (FileNotFoundError, yaml.YAMLError) as e:
+        if verbose:
+            print(f"YAML file not found or error reading YAML file: {e}. Defaulting to all questions.")
+        selected_questions = None
+
     # Load models
     models = load_models(CONFIG_PATH, verbose)
     if not models:
@@ -138,6 +151,12 @@ def process_question_files(verbose):
         # Process each question file
         for q_file in os.listdir(QUESTIONS_FOLDER):
             if q_file.endswith('.q'):
+                q_name = os.path.splitext(q_file)[0]
+		# Check if this question is listed in the YAML file, if it exists
+                if selected_questions is not None and q_name not in selected_questions:
+                    if verbose:
+                        print(f"Skipping question '{q_name}' as it is not listed in selected questions")
+                    continue
                 if verbose:
                     print(f"\nProcessing question file: {q_file}")
 
@@ -146,7 +165,7 @@ def process_question_files(verbose):
 
                 if question:
                     output_file = os.path.join(ANSWERS_FOLDER, f"{os.path.splitext(q_file)[0]}.a")
-                    
+
                     # Load existing answers if any
                     existing_answers = {}
                     if os.path.exists(output_file):
