@@ -14,7 +14,6 @@ API_KEY = config['open_webui']['api_key']
 BASE_URL = config['open_webui']['location']
 
 # Constants
-BASE_URL = 'http://localhost:3001'
 CONFIG_PATH = './config/config.yaml'
 QUESTIONS_FOLDER = './questions'
 ANSWERS_FOLDER = './answers'
