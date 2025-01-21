@@ -6,7 +6,7 @@ import argparse
 
 
 def load_connect_owui(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding="utf-8") as file:
         return yaml.safe_load(file)
 
 config = load_connect_owui('./config/connect-owui.yaml')
@@ -14,7 +14,6 @@ API_KEY = config['open_webui']['api_key']
 BASE_URL = config['open_webui']['location']
 
 # Constants
-BASE_URL = 'http://localhost:3001'
 CONFIG_PATH = './config/config.yaml'
 QUESTIONS_FOLDER = './questions'
 ANSWERS_FOLDER = './answers'
@@ -22,7 +21,7 @@ ANSWERS_FOLDER = './answers'
 def load_models(config_path, verbose):
     """Load model names from a YAML configuration file."""
     try:
-        with open(config_path, 'r') as file:
+        with open(config_path, 'r', encoding="utf-8") as file:
             config = yaml.safe_load(file)
         models = config.get('selected_models', [])
         if verbose:
@@ -35,7 +34,7 @@ def load_models(config_path, verbose):
 def read_question(file_name, verbose):
     """Read the question from the specified file."""
     try:
-        with open(file_name, 'r') as file:
+        with open(file_name, 'r', encoding="utf-8") as file:
             question = file.read().strip()
         if verbose:
             print(f"Question read from '{file_name}': {question}")
@@ -109,7 +108,7 @@ def generate_answer(question, model_name, verbose):
 def write_answers(file_name, answers, verbose):
     """Write the collected answers to a specified file as JSON."""
     try:
-        with open(file_name, 'w') as file:
+        with open(file_name, 'w', encoding="utf-8") as file:
             json.dump(answers, file, indent=2)
         if verbose:
             print(f"Answers written to '{file_name}'")
@@ -152,7 +151,7 @@ def process_question_files(verbose):
                     existing_answers = {}
                     if os.path.exists(output_file):
                         try:
-                            with open(output_file, 'r') as file:
+                            with open(output_file, 'r', encoding="utf-8") as file:
                                 existing_answers = json.load(file)
                             if verbose:
                                 print(f"Loaded existing answers from {output_file}")

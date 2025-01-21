@@ -11,20 +11,20 @@ os.makedirs('./targets', exist_ok=True)
 def save_question(nom_question, question_content):
     """Save the question content to a .q file."""
     question_path = f'./questions/{nom_question}.q'
-    with open(question_path, 'w') as file:
+    with open(question_path, 'w', encoding="utf-8") as file:
         file.write(question_content)
 
 def save_target(nom_question, target_data):
     """Save the target information to a .t file in JSON format."""
     target_path = f'./targets/{nom_question}.t'
-    with open(target_path, 'w') as file:
+    with open(target_path, 'w', encoding="utf-8") as file:
         json.dump(target_data, file, indent=4)
 
 def load_question(nom_question):
     """Load the question content from a .q file."""
     question_path = f'./questions/{nom_question}.q'
     if os.path.exists(question_path):
-        with open(question_path, 'r') as file:
+        with open(question_path, 'r', encoding="utf-8") as file:
             return file.read()
     return None
 
@@ -32,7 +32,7 @@ def load_target(nom_question):
     """Load the target information from a .t file."""
     target_path = f'./targets/{nom_question}.t'
     if os.path.exists(target_path):
-        with open(target_path, 'r') as file:
+        with open(target_path, 'r', encoding="utf-8") as file:
             return json.load(file)
     return None
 
