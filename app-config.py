@@ -110,11 +110,30 @@ def load_selected_models():
                 return []
     return []
 
+#def save_to_yaml(selected_models):
+#    """Save the list of selected models to a YAML file."""
+#    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+#    with open(CONFIG_PATH, 'w', encoding="utf-8") as file:
+#        yaml.dump({"selected_models": selected_models}, file)
+
 def save_to_yaml(selected_models):
-    """Save the list of selected models to a YAML file."""
-    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+    """Save the updated list of selected models to a YAML file, preserving existing configurations."""
+    # Load the existing configuration
+    current_config = {}
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
+            try:
+                current_config = yaml.safe_load(file) or {}
+            except yaml.YAMLError:
+                print("Error reading YAML configuration")
+
+    # Update the selected models
+    current_config['selected_models'] = selected_models
+
+    # Write the updated configuration back to the YAML file
     with open(CONFIG_PATH, 'w', encoding="utf-8") as file:
-        yaml.dump({"selected_models": selected_models}, file)
+        yaml.dump(current_config, file)
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():

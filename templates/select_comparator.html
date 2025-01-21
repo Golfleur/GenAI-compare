@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Sélection du modèle comparateur</title>
+  </head>
+  <body>
+    <h1>Sélection du modèle qui effectue l'analyse</h1>
+    <form method="post">
+      <label for="model">Sélectionnez un modèle :</label>
+      <select name="model" id="model">
+        {% for model in models %}
+          <option value="{{ model }}" {% if selected_model == model %}selected{% endif %}>{{ model }}</option>
+        {% endfor %}
+      </select>
+      <input type="submit" value="Sauvegarder la sélection">
+    </form>
+  </body>
+</html>
