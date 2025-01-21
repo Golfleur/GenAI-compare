@@ -64,7 +64,7 @@
 </head>
 <body>
     <h1>Ajouter une question</h1>
-    <form action="/" method="post">
+    <form action="/add_q" method="post">
         <label for="nom_question">Nom court de la question (un mot):</label>
         <input type="text" id="nom_question" name="nom_question" required><br>
 
@@ -83,6 +83,7 @@
         <input type="submit" value="Ajouter la question">
     </form>
     <br>
+    <!-- <a href="{{ url_for('add_q') }}">Sauvegarder la question</a><br>  -->
     <a href="{{ url_for('index') }}">Retour au menu</a>
 </body>
 </html>
