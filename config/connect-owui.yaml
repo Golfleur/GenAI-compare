@@ -1,5 +1,3 @@
-# connect-owui.yaml
-
 open_webui:
-  api_key: sk-f09655f8793e423685cb5820c93ec368
+  api_key: <Open-WebUI API Key>
   location: http://localhost:3001
