@@ -81,6 +81,14 @@ def fetch_models():
                         'parameter_size': 'Variable'
                     }
 
+                # Perplexity-specific details
+                elif 'perplexity' in enriched_model['name']:
+                    enriched_model['model_type'] = 'Perplexity'
+                    enriched_model['details'] = {
+                        'family': 'online',
+                        'parameter_size': 'Variable'
+                    }
+
                 # Anthropic-specific details
                 elif 'anthropic' in enriched_model['name'].lower() or 'claude' in enriched_model['name'].lower():
                     enriched_model['model_type'] = 'Anthropic'
@@ -145,6 +153,7 @@ def index():
         'Google': [],
         'Anthropic': [],
         'OpenAI': [],
+        'Perplexity': [],
         'Ollama': []
     }
     
@@ -154,6 +163,8 @@ def index():
             providers['Google'].append(model)
         elif 'anthropic' in model_name or 'claude' in model_name:
             providers['Anthropic'].append(model)
+        elif 'perplexity' in model_name or 'sonar' in model_name:
+            providers['Perplexity'].append(model)
         elif model.get('model_type') == 'OpenAI' or 'gpt' in model_name:
             providers['OpenAI'].append(model)
         elif model.get('model_type') == 'Ollama':

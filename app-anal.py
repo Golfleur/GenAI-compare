@@ -99,7 +99,7 @@ def main(verbose=False):
             answer_path = os.path.join(answers_dir, question_file.replace('.q', '.a'))
 
             if not os.path.exists(answer_path):
-	        print(f"Skipping {base_name} because the answer file {answer_path} does not exist.")
+	            #print(f"Skipping {base_name} because the answer file {answer_path} does not exist.")
                 continue
 
             target_path = os.path.join(targets_dir, question_file.replace('.q', '.t'))

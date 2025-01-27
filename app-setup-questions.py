@@ -45,6 +45,22 @@ def load_target(nom_question):
             return json.load(file)
     return None
 
+def save_selected_questions(selected_questions):
+    """Save the selected question names to a YAML file."""
+    os.makedirs('./config', exist_ok=True)  # Ensure the config directory exists
+    config_path = './config/selected_questions.yaml'
+    with open(config_path, 'w', encoding='utf-8') as file:
+        yaml.dump(selected_questions, file)
+
+def load_selected_questions():
+    """Load the list of selected questions from the YAML file."""
+    config_yaml_path = './config/selected_questions.yaml'
+    try:
+        with open(config_yaml_path, 'r', encoding='utf-8') as stream:
+            return yaml.safe_load(stream) or []
+    except (FileNotFoundError, yaml.YAMLError):
+        return []
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
 #    if request.method == 'POST':
@@ -150,13 +166,15 @@ def select_questions():
     if request.method == 'POST':
         selected_questions = request.form.getlist('selected_questions')
         save_selected_questions(selected_questions)
-        return redirect(url_for('questions'))
+        return redirect(url_for('select_questions'))
     
     # Get the list of all questions
     question_files = os.listdir('./questions')
     questions = [filename.split('.')[0] for filename in question_files]
 
-    return render_template('select_questions.html', questions=questions)
+    selected_questions = load_selected_questions()
+
+    return render_template('select_questions.html', questions=questions, selected_questions=selected_questions)
 
 
 if __name__ == '__main__':

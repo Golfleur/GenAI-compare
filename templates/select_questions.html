@@ -2,15 +2,16 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Sélectionner des questions</title>
+    <title>Sélectionner de questions</title>
 </head>
 <body>
-    <h1>Sélectionner les questions qui seront soumise sà la comparaison</h1>
+    <h1>Sélectionner les questions qui seront soumises à la comparaison</h1>
     <form method="post">
         <ul>
         {% for question in questions %}
             <li>
-                <input type="checkbox" name="selected_questions" value="{{ question }}">{{ question }}
+                <input type="checkbox" name="selected_questions" value="{{ question }}"  {% if question in selected_questions %}checked{% endif %}>
+                {{ question }}
             </li>
         {% endfor %}
         </ul>
