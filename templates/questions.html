@@ -33,6 +33,7 @@
         li p {
             margin: 5px 0;
             line-height: 1.4;
+            white-space: pre-wrap;
         }
         a {
             display: inline-block;
@@ -56,10 +57,10 @@
     {% for question in questions %}
         <li>
             <strong>Nom court:</strong> {{ question.nom_question }}
-            <p><strong>Question:</strong> {{ question.question_content }}</p>
-            <p><strong>Réponse cible:</strong> {{ question.target_data.reponse_cible }}</p>
-            <p><strong>Infos cruciales:</strong> {{ question.target_data.infos_cruciales }}</p>
-            <p><strong>Infos à éviter:</strong> {{ question.target_data.infos_a_eviter }}</p>
+            <p><strong>Question:</strong> {{ question.question_content|replace('\n', '<br>')|safe }}</p>
+            <p><strong>Réponse cible:</strong> {{ question.target_data.reponse_cible|replace('\n', '<br>')|safe  }}</p>
+            <p><strong>Infos cruciales:</strong> {{ question.target_data.infos_cruciales|replace('\n', '<br>')|safe }}</p>
+            <p><strong>Infos à éviter:</strong> {{ question.target_data.infos_a_eviter|replace('\n', '<br>')|safe }}</p>
             <a href="{{ url_for('edit', nom_question=question.nom_question) }}">Editer</a>
         </li>
     {% else %}
