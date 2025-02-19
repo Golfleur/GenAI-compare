@@ -64,8 +64,10 @@
 </head>
 <body>
     <h1>Editeur de question: {{ nom_question }}</h1>
+    <p><a href="{{ url_for('questions') }}">Retour</a></p>
     <form action="{{ url_for('edit', nom_question=nom_question) }}" method="post">
         <label for="question_content">Question:</label>
+        
         <textarea id="question_content" name="question_content" required>{{ question_content }}</textarea><br>
 
         <label for="reponse_cible">Réponse cible:</label>
@@ -80,6 +82,6 @@
         <input type="submit" value="Mettre à jour la question">
     </form>
     <br>
-    <a href="{{ url_for('questions') }}">Retour à l'acceuil</a>
+    <a href="{{ url_for('questions') }}">Retour</a>
 </body>
 </html>

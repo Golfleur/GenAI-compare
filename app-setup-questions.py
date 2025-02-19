@@ -133,6 +133,7 @@ def questions():
             'question_content': question_content,
             'target_data': target_data
         })
+    questions.sort(key=lambda x: x['nom_question'].lower())
     return render_template('questions.html', questions=questions)
 
 @app.route('/edit/<nom_question>', methods=['GET', 'POST'])
@@ -171,7 +172,7 @@ def select_questions():
     # Get the list of all questions
     question_files = os.listdir('./questions')
     questions = [filename.split('.')[0] for filename in question_files]
-
+    questions.sort(key=lambda x: x.lower())
     selected_questions = load_selected_questions()
 
     return render_template('select_questions.html', questions=questions, selected_questions=selected_questions)
