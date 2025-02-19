@@ -77,6 +77,7 @@
         .type-OpenAI { background: #e8f5e9; color: #2e7d32; }
         .type-Google { background: #fff3e0; color: #ef6c00; }
         .type-Anthropic { background: #f3e5f5; color: #7b1fa2; }
+        .type-Other { background: #f5f5f5; color: #666; }
         .model-key-info {
             display: flex;
             gap: 10px;
@@ -134,8 +135,7 @@
                                         {{ model['name'] }}
                                     </label>
                                 </div>
-                                <span class="model-type type-{{ model['model_type'] }}">{{ model['model_type'] }}</span>
-                                
+                                <span class="model-type type-{{ model['model_type'] }}">{{ model['model_type'] }}</span>                               
                                 <div class="model-key-info">
                                     {% if model.details %}
                                         {% if model.details.parameter_size %}
@@ -153,7 +153,6 @@
                     </div>
                 {% endif %}
             {% endfor %}
-           
             <button type="submit" class="submit-button">Sauvegarder</button>
         </form>
     </div>

@@ -154,7 +154,8 @@ def index():
         'Anthropic': [],
         'OpenAI': [],
         'Perplexity': [],
-        'Ollama': []
+        'Ollama': [],
+        'Other':[]
     }
     
     for model in models:
@@ -169,7 +170,9 @@ def index():
             providers['OpenAI'].append(model)
         elif model.get('model_type') == 'Ollama':
             providers['Ollama'].append(model)
-    
+        else:
+            providers['Other'].append(model)
+
     if request.method == 'POST':
         selected_models = request.form.getlist('models')
         save_to_yaml(selected_models)
