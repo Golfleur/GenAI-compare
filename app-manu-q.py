@@ -29,7 +29,7 @@ def save_manual_answer(question_name, answer_content, source):
     with open(answer_path, 'w', encoding='utf-8') as file:
         json.dump(existing_answers, file, indent=2)
 
-@app.route('/manual_entry', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def manual_entry():
     if request.method == 'POST':
         question_name = request.form.get('question_name')
@@ -41,6 +41,7 @@ def manual_entry():
         return redirect(url_for('manual_entry'))
     
     questions = list_questions()
+    questions.sort(key=lambda x: x.lower())
     return render_template('manual_entry.html', questions=questions)
 
 if __name__ == '__main__':
