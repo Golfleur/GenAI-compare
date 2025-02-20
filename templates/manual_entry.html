@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manual Answer Entry</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label, textarea, select, input {
+            display: block;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        select, input[type="text"],
+        textarea {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        textarea {
+            height: 100px;
+        }
+        input[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Enter a Manual Answer</h1>
+    <form action="/manual_entry" method="post">
+        <label for="question_name">Select a Question:</label>
+        <select id="question_name" name="question_name" required>
+            {% for question in questions %}
+                <option value="{{ question }}">{{ question }}</option>
+            {% endfor %}
+        </select>
+        
+        <label for="source">Answer Source:</label>
+        <input type="text" id="source" name="source" required>
+
+        <label for="answer_content">Manual Answer:</label>
+        <textarea id="answer_content" name="answer_content" required></textarea>
+        
+        <input type="submit" value="Save Answer">
+    </form>
+</body>
+</html>
