@@ -243,10 +243,12 @@ def questions():
         nom_question = filename.split('.')[0]
         question_content = load_question(nom_question)
         target_data = load_target(nom_question)
+        first_paragraph = question_content.split('\n')[0] if question_content else ''
         questions.append({
             'nom_question': nom_question,
             'question_content': question_content,
-            'target_data': target_data
+            'target_data': target_data,
+            'first_paragraph': first_paragraph
         })
     questions.sort(key=lambda x: x['nom_question'].lower())
     return render_template('questions.html', questions=questions)
@@ -259,10 +261,12 @@ def delquestion():
         nom_question = filename.split('.')[0]
         question_content = load_question(nom_question)
         target_data = load_target(nom_question)
+        first_paragraph = question_content.split('\n')[0] if question_content else ''
         questions.append({
             'nom_question': nom_question,
             'question_content': question_content,
-            'target_data': target_data
+            'target_data': target_data,
+            'first_paragraph': first_paragraph
         })
     questions.sort(key=lambda x: x['nom_question'].lower())
     return render_template('delquestion.html', questions=questions)

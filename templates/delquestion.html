@@ -46,14 +46,59 @@
             cursor: pointer;
             transition: background-color 0.3s;
         }
+        input[type="button"]:hover {
+            background-color: #c82333;
+        }
+        input[type="button"] {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
         input[type="submit"]:hover {
             background-color: #c82333;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
     <h1>Liste des questions</h1>
-    <form action="{{ url_for('delete_questions') }}" method="post">
+    <form id="deleteForm" action="{{ url_for('delete_questions') }}" method="post">
         <ul>
             {% for question in questions %}
                 <li>
@@ -62,8 +107,57 @@
                 </li>
             {% endfor %}
         </ul>
-        <input type="submit" value="Supprimer les questions sélectionnées">
+        <input type="button" value="Supprimer les questions sélectionnées" onclick="showConfirmationModal()">
     </form>
     <p><a href="{{ url_for('index') }}">Retour au menu</a></p>
+
+    <!-- The Modal -->
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Confirmer la suppression</h2>
+            <p>Êtes-vous sûr de vouloir supprimer les questions suivantes?</p>
+            <ul id="selectedQuestionsList"></ul>
+            <button type="button" onclick="confirmDelete()">Confirmer</button>
+            <button type="button" onclick="closeModal()">Annuler</button>
+        </div>
+    </div>
+
+    <script>
+        var questionsData = {{ questions | tojson }};
+
+        function showConfirmationModal() {
+            var selectedQuestions = document.querySelectorAll('input[name="selected_questions"]:checked');
+            var modal = document.getElementById('confirmationModal');
+            var selectedQuestionsList = document.getElementById('selectedQuestionsList');
+            selectedQuestionsList.innerHTML = '';
+
+            selectedQuestions.forEach(function(question) {
+                var nom_question = question.value;
+                var firstParagraph = questionsData.find(q => q.nom_question === nom_question).first_paragraph;
+                var listItem = document.createElement('li');
+                listItem.textContent = nom_question + ': ' + firstParagraph + " [...]";
+                selectedQuestionsList.appendChild(listItem);
+            });
+
+            modal.style.display = "block";
+        }
+
+        function closeModal() {
+            var modal = document.getElementById('confirmationModal');
+            modal.style.display = "none";
+        }
+
+        function confirmDelete() {
+            document.getElementById('deleteForm').submit();
+        }
+
+        window.onclick = function(event) {
+            var modal = document.getElementById('confirmationModal');
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    </script>
 </body>
 </html>
