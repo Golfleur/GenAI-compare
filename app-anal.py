@@ -3,6 +3,9 @@ import json
 import argparse
 import requests
 import yaml
+import re
+
+THINK_MARKER_TO_BE_IGNORED = True
 
 def load_connect_owui(file_path):
     with open(file_path, 'r') as file:
@@ -120,10 +123,10 @@ def main(verbose=False):
 
             # Load answers from the JSON structure
             answers_data = read_json_file(answer_path)
-
             for model, model_data in answers_data.items():
                 answer_text = model_data['choices'][0]['message']['content']
-
+                if THINK_MARKER_TO_BE_IGNORED:
+                    answer_text =  re.sub(r'<think>.*?</think>', '', answer_text, flags=re.DOTALL)
                 # Use loaded analysis model to analyze the answer
                 api_response = get_analysis_response(
                     question, answer_text, target_answer, infos_cruciales, infos_a_eviter, analysis_model, verbose
