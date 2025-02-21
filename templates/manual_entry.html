@@ -49,22 +49,24 @@
     </style>
 </head>
 <body>
-    <h1>Enter a Manual Answer</h1>
+    <h1>Entrez manuellement une réponse provenant de l'externe</h1>
     <form action="/manual_entry" method="post">
-        <label for="question_name">Select a Question:</label>
+        <p>S'il s'agit d'une nouvelle question, <a class="button" href="{{ url_for('add_q') }}">ajoutez la ici</a> avant d'insérer une réponse externe</p>
+        <label for="question_name">Sélectionnez une question</label>
         <select id="question_name" name="question_name" required>
             {% for question in questions %}
                 <option value="{{ question }}">{{ question }}</option>
             {% endfor %}
         </select>
         
-        <label for="source">Answer Source:</label>
+        <label for="source">Source de la réponse externe:</label>
         <input type="text" id="source" name="source" required>
 
-        <label for="answer_content">Manual Answer:</label>
+        <label for="answer_content">Réponse:</label>
         <textarea id="answer_content" name="answer_content" required></textarea>
         
-        <input type="submit" value="Save Answer">
+        <input type="submit" value="Sauvegarder la réponse">
     </form>
+    <a href="{{ url_for('index') }}">Retour au menu</a>
 </body>
 </html>
