@@ -54,25 +54,25 @@
 <body>
     <h1>Toutes les questions</h1>
     <div class="back-link">
-        <a href="{{ url_for('index') }}">Retour à l'accueil</a>
+        <a href="{{ url_for('edit') }}">Retour à la liste</a>
     </div>
     <ul>
     {% for question in questions %}
         <li>
             <strong>Nom court:</strong> {{ question.nom_question }}<br>
-            <a href="{{ url_for('edit', nom_question=question.nom_question) }}">Editer</a><br>
+            <a href="{{ url_for('edit_question', nom_question=question.nom_question) }}">Editer</a><br>
             <p><strong>Question:</strong> {{ question.question_content|replace('\n', '<br>')|safe }}</p>
             <p><strong>Réponse cible:</strong> {{ question.target_data.reponse_cible|replace('\n', '<br>')|safe  }}</p>
             <p><strong>Infos cruciales:</strong> {{ question.target_data.infos_cruciales|replace('\n', '<br>')|safe }}</p>
             <p><strong>Infos à éviter:</strong> {{ question.target_data.infos_a_eviter|replace('\n', '<br>')|safe }}</p>
-            <a href="{{ url_for('edit', nom_question=question.nom_question) }}">Editer</a>
+            <a href="{{ url_for('edit_question', nom_question=question.nom_question) }}">Editer</a>
         </li>
     {% else %}
         <li>Aucune question trouvée.</li>
     {% endfor %}
     </ul>
     <div class="back-link">
-        <a href="{{ url_for('index') }}">Retour à l'accueil</a>
+        <a href="{{ url_for('edit') }}">Retour à la liste</a>
     </div>
 </body>
 </html>

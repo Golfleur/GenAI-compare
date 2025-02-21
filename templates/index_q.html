@@ -36,8 +36,17 @@
 <body>
     <h1>Gestionnaire de questions</h1>
     <a class="button" href="{{ url_for('add_q') }}">Ajouter une nouvelle question</a>
-    <a class="button" href="{{ url_for('select_questions') }}">Sélectionner des questions</a>
-    <a class="button" href="{{ url_for('questions') }}">Voir et éditer les questions</a>
-    <a class="button" href="{{ url_for('manual_entry') }}">Entrée manuelle des réponses</a>
+    <a class="button" href="{{ url_for('select_questions') }}">Sélectionner les questions soumises à la comparaison</a>
+    <a class="button" href="{{ url_for('edit') }}">Voir et éditer les questions</a>
+    <a class="button" href="{{ url_for('manual_entry') }}">Entrée manuelle d'une réponse externe</a>
+    <a class="button" href="{{ url_for('delquestion') }}">Effacer des questions / réponses existantes</a>
+    <h1>Sélection les modèles à comparer</h1>
+    <a class="button" href="{{ url_for('models') }}">Choisir les modèles</a>
+    <h1>Sélection du modèle effectuant l'analyse des réponses</h1>
+    <a class="button" href="{{ url_for('select_comparator') }}">Choisir le modèle de comparaison</a>
+    <h1>Exécuter la comparaison</h1>
+    <a class="button" href="{{ url_for('run_compare') }}">Exécuter la comparaison (et soyez très patient)</a>
+    <h1>Exécuter l'analyse une fois la comparaison complétée</h1>
+    <a class="button" href="{{ url_for('run_anal') }}">Exécuter l'analyse (et soyez un peu patient)</a>
 </body>
 </html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des questions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #333;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #fff;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        a {
+            text-decoration: none;
+            color: #007bff;
+            transition: color 0.3s;
+        }
+        a:hover {
+            color: #0056b3;
+        }
+        input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        input[type="submit"] {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Liste des questions</h1>
+    <form action="{{ url_for('delete_questions') }}" method="post">
+        <ul>
+            {% for question in questions %}
+                <li>
+                    <input type="checkbox" name="selected_questions" value="{{ question.nom_question }}">
+                    <a href="{{ url_for('edit_question', nom_question=question.nom_question) }}">{{ question.nom_question }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+        <input type="submit" value="Supprimer les questions sélectionnées">
+    </form>
+    <p><a href="{{ url_for('index') }}">Retour au menu</a></p>
+</body>
+</html>

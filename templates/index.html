@@ -116,7 +116,8 @@
 <body>
     <div class="container">
         <h1>Sélection des modèles</h1>
-        <form method="POST">
+          <form method="POST">
+            <p><a href="{{ url_for('index') }}">Retour au menu</a></p>
             {% for provider, provider_models in providers.items() %}
                 {% if provider_models %}
                     <div class="model-section">
@@ -150,10 +151,11 @@
                             </div>
                             {% endfor %}
                         </div>
+                        <button type="submit" class="submit-button">Sauvegarder</button>
+                        <p><a href="{{ url_for('index') }}">Retour au menu</a></p>
                     </div>
                 {% endif %}
             {% endfor %}
-            <button type="submit" class="submit-button">Sauvegarder</button>
         </form>
     </div>
 </body>
