@@ -118,44 +118,49 @@
         <h1>Sélection des modèles</h1>
           <form method="POST">
             <p><a href="{{ url_for('index') }}">Retour au menu</a></p>
-            {% for provider, provider_models in providers.items() %}
-                {% if provider_models %}
-                    <div class="model-section">
-                        <h2>{{ provider }}</h2>
-                        <div class="model-grid">
-                            {% for model in provider_models %}
-                            <div class="model-card">
-                                <div class="model-header">
-                                    <input type="checkbox" 
-                                           name="models" 
-                                           value="{{ model['id'] }}" 
-                                           id="model-{{ provider }}-{{ loop.index }}"
-                                           class="model-checkbox"
-                                           {% if model['id'] in selected_models %}checked{% endif %}>
-                                    <label for="model-{{ provider }}-{{ loop.index }}" class="model-name">
-                                        {{ model['name'] }}
-                                    </label>
-                                </div>
-                                <span class="model-type type-{{ model['model_type'] }}">{{ model['model_type'] }}</span>                               
-                                <div class="model-key-info">
-                                    {% if model.details %}
-                                        {% if model.details.parameter_size %}
-                                        <span class="key-info-item">{{ model.details.parameter_size }}</span>
+            {% if not models %}
+                <strong>Erreur : Échec de l'API - Veuillez mettre à jour les informations de connexion</strong>
+                <p><a href="{{ url_for('index') }}">Retour au menu</a></p>
+            {% else %}
+                {% for provider, provider_models in providers.items() %}
+                    {% if provider_models %}
+                        <div class="model-section">
+                            <h2>{{ provider }}</h2>
+                            <div class="model-grid">
+                                {% for model in provider_models %}
+                                <div class="model-card">
+                                    <div class="model-header">
+                                        <input type="checkbox" 
+                                            name="models" 
+                                            value="{{ model['id'] }}" 
+                                            id="model-{{ provider }}-{{ loop.index }}"
+                                            class="model-checkbox"
+                                            {% if model['id'] in selected_models %}checked{% endif %}>
+                                        <label for="model-{{ provider }}-{{ loop.index }}" class="model-name">
+                                            {{ model['name'] }}
+                                        </label>
+                                    </div>
+                                    <span class="model-type type-{{ model['model_type'] }}">{{ model['model_type'] }}</span>                               
+                                    <div class="model-key-info">
+                                        {% if model.details %}
+                                            {% if model.details.parameter_size %}
+                                            <span class="key-info-item">{{ model.details.parameter_size }}</span>
+                                            {% endif %}
+                                            {% if model.details.family %}
+                                            <span class="key-info-item">{{ model.details.family }}</span>
+                                            {% endif %}
                                         {% endif %}
-                                        {% if model.details.family %}
-                                        <span class="key-info-item">{{ model.details.family }}</span>
-                                        {% endif %}
-                                    {% endif %}
-                                    <span class="key-info-item">{{ model['owned_by'] }}</span>
+                                        <span class="key-info-item">{{ model['owned_by'] }}</span>
+                                    </div>
                                 </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
+                            <button type="submit" class="submit-button">Sauvegarder</button>
+                            <p><a href="{{ url_for('index') }}">Retour au menu</a></p>
                         </div>
-                        <button type="submit" class="submit-button">Sauvegarder</button>
-                        <p><a href="{{ url_for('index') }}">Retour au menu</a></p>
-                    </div>
-                {% endif %}
-            {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
         </form>
     </div>
 </body>

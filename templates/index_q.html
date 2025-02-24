@@ -6,27 +6,39 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 600px;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 10px;
             background-color: #f4f4f9;
-            text-align: center;
         }
         h1 {
             color: #333;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 10px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 5px;
         }
         .button {
-            display: block;
             background-color: #007bff;
             color: white;
-            padding: 10px 20px;
-            margin: 10px auto;
+            padding: 0px;
             border-radius: 5px;
             text-decoration: none;
             font-size: 16px;
+            text-align: center;
             cursor: pointer;
             transition: background-color 0.3s;
-            width: fit-content;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 40px;
         }
         .button:hover {
             background-color: #0056b3;
@@ -34,19 +46,49 @@
     </style>
 </head>
 <body>
-    <h1>Gestionnaire de questions</h1>
-    <a class="button" href="{{ url_for('add_q') }}">Ajouter une nouvelle question</a>
-    <a class="button" href="{{ url_for('select_questions') }}">Sélectionner les questions soumises à la comparaison</a>
-    <a class="button" href="{{ url_for('edit') }}">Voir et éditer les questions</a>
-    <a class="button" href="{{ url_for('manual_entry') }}">Entrée manuelle d'une réponse externe</a>
-    <a class="button" href="{{ url_for('delquestion') }}">Effacer des questions / réponses existantes</a>
-    <h1>Sélection les modèles à comparer</h1>
-    <a class="button" href="{{ url_for('models') }}">Choisir les modèles</a>
-    <h1>Sélection du modèle effectuant l'analyse des réponses</h1>
-    <a class="button" href="{{ url_for('select_comparator') }}">Choisir le modèle de comparaison</a>
-    <h1>Exécuter la comparaison</h1>
-    <a class="button" href="{{ url_for('run_compare') }}">Exécuter la comparaison (et soyez très patient)</a>
-    <h1>Exécuter l'analyse une fois la comparaison complétée</h1>
-    <a class="button" href="{{ url_for('run_anal') }}">Exécuter l'analyse (et soyez un peu patient)</a>
+    <div class="section">
+        <h1>Configurer et tester Open WebUI</h1>
+        <div class="grid-container">
+            <a class="button" href="{{ url_for('edit_config') }}">Configurateur Open WebUI</a>
+        </div>
+    </div>
+    <div class="section">
+        <h1>Gestionnaire de questions</h1>
+        <div class="grid-container">
+            <a class="button" href="{{ url_for('add_q') }}">Ajouter une nouvelle question</a>
+            <a class="button" href="{{ url_for('select_questions') }}">Sélectionner les questions</a>
+            <a class="button" href="{{ url_for('edit') }}">Voir et éditer les questions</a>
+            <a class="button" href="{{ url_for('manual_entry') }}">Entrée manuelle d'une réponse</a>
+            <a class="button" href="{{ url_for('delquestion') }}">Effacer questions/réponses</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h1>Sélection des modèles à comparer</h1>
+        <div class="grid-container">
+            <a class="button" href="{{ url_for('models') }}">Choisir les modèles</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h1>Sélection du modèle d'analyse</h1>
+        <div class="grid-container">
+            <a class="button" href="{{ url_for('select_comparator') }}">Choisir modèle de comparaison</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h1>Exécuter la comparaison</h1>
+        <div class="grid-container">
+            <a class="button" href="{{ url_for('run_compare') }}">Exécuter la comparaison (soyez très très patients)</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h1>Exécuter l'analyse</h1>
+        <div class="grid-container">
+            <a class="button" href="{{ url_for('run_anal') }}">Exécuter l'analyse (soyez patients)</a>
+        </div>
+    </div>
 </body>
 </html>

@@ -3,6 +3,7 @@ import json
 import os
 import yaml
 import requests
+import subprocess
 
 app = Flask(__name__)
 
@@ -12,18 +13,22 @@ os.makedirs('./targets', exist_ok=True)
 os.makedirs('./answers', exist_ok=True)
 os.makedirs('./config', exist_ok=True)
 
-# Configuration paths and settings
-CONFIG_PATH = './config/config.yaml'
-
 def load_connect_owui(file_path):
     with open(file_path, 'r', encoding="utf-8") as file:
         return yaml.safe_load(file)
 
-# Load OpenWebUI configuration
-config = load_connect_owui('./config/connect-owui.yaml')
+# Configuration paths and settings
+CONFIG_PATH = './config/config.yaml'
+config_file = './config/connect-owui.yaml'
+config = load_connect_owui(config_file)
 API_KEY = config['open_webui']['api_key']
 BASE_URL = config['open_webui']['location']
 API_URL = f"{BASE_URL}/api/models"
+
+def save_connect_owui(config, file_path):
+    with open(file_path, 'w') as file:
+        yaml.dump(config, file)
+
 
 # Question management functions
 def save_question(nom_question, question_content):
@@ -79,80 +84,89 @@ def save_manual_answer(question_name, answer_content, source):
 
 # Model management functions
 def fetch_models():
-    headers = {'Authorization': f'Bearer {API_KEY}'}
-    response = requests.get(API_URL, headers=headers)
-    if response.status_code == 200:
-        try:
-            response_data = response.json()
-            models_data = response_data.get('data', [])
-            enriched_models = []
-            for model in models_data:
-                # Base model information
-                enriched_model = {
-                    'id': model.get('id', 'Unknown'),
-                    'name': model.get('name', model.get('id', 'Unnamed Model')),
-                    'owned_by': model.get('owned_by', 'Unknown'),
-                    'created': model.get('created', 0),
-                    'details': {}  # Initialize details dictionary
-                }
-                # Detailed description and capabilities
-                if 'info' in model and 'meta' in model['info']:
-                    meta = model['info']['meta']
-                    enriched_model['description'] = meta.get('description', '')
-                    enriched_model['profile_image'] = meta.get('profile_image_url', '')
-                # Ollama-specific details
-                if 'ollama' in model:
-                    ollama_details = model['ollama'].get('details', {})
-                    enriched_model['model_type'] = 'Ollama'
-                    enriched_model['details'] = {
-                        'format': ollama_details.get('format', 'Unknown'),
-                        'family': ollama_details.get('family', 'Unknown'),
-                        'parameter_size': ollama_details.get('parameter_size', 'Unknown'),
-                        'quantization_level': ollama_details.get('quantization_level', 'Unknown')
+    config = load_connect_owui(config_file)
+    API_KEY = config['open_webui']['api_key']
+    BASE_URL = config['open_webui']['location']
+    API_URL = f"{BASE_URL}/api/models"
+
+    if test_connection(True):
+        headers = {'Authorization': f'Bearer {API_KEY}'}
+        response = requests.get(API_URL, headers=headers)
+        if response.status_code == 200:
+            try:
+                response_data = response.json()
+                models_data = response_data.get('data', [])
+                enriched_models = []
+                for model in models_data:
+                    # Base model information
+                    enriched_model = {
+                        'id': model.get('id', 'Unknown'),
+                        'name': model.get('name', model.get('id', 'Unnamed Model')),
+                        'owned_by': model.get('owned_by', 'Unknown'),
+                        'created': model.get('created', 0),
+                        'details': {}  # Initialize details dictionary
                     }
-                    enriched_model['size'] = model['ollama'].get('size', 0)
-                    enriched_model['modified_at'] = model['ollama'].get('modified_at', '')
-                # OpenAI-specific details
-                elif 'openai' in model:
-                    enriched_model['model_type'] = 'OpenAI'
-                    openai_details = model['openai']
-                    enriched_model['details'] = {
-                        'family': 'GPT',
-                        'parameter_size': 'Variable'
-                    }
-                    enriched_model['openai_details'] = {
-                        'id': openai_details.get('id', ''),
-                        'object': openai_details.get('object', ''),
-                        'owned_by': openai_details.get('owned_by', '')
-                    }
-                # Google-specific details
-                elif 'Google' in enriched_model['name']:
-                    enriched_model['model_type'] = 'Google'
-                    enriched_model['details'] = {
-                        'family': 'Gemini/PaLM',
-                        'parameter_size': 'Variable'
-                    }
-                # Perplexity-specific details
-                elif 'perplexity' in enriched_model['name']:
-                    enriched_model['model_type'] = 'Perplexity'
-                    enriched_model['details'] = {
-                        'family': 'online',
-                        'parameter_size': 'Variable'
-                    }
-                # Anthropic-specific details
-                elif 'anthropic' in enriched_model['name'].lower() or 'claude' in enriched_model['name'].lower():
-                    enriched_model['model_type'] = 'Anthropic'
-                    enriched_model['details'] = {
-                        'family': 'Claude',
-                        'parameter_size': 'Variable'
-                    }
-                enriched_models.append(enriched_model)
-            return enriched_models
-        except ValueError as e:
-            print(f"Error parsing JSON: {e}")
-            return []
+                    # Detailed description and capabilities
+                    if 'info' in model and 'meta' in model['info']:
+                        meta = model['info']['meta']
+                        enriched_model['description'] = meta.get('description', '')
+                        enriched_model['profile_image'] = meta.get('profile_image_url', '')
+                    # Ollama-specific details
+                    if 'ollama' in model:
+                        ollama_details = model['ollama'].get('details', {})
+                        enriched_model['model_type'] = 'Ollama'
+                        enriched_model['details'] = {
+                            'format': ollama_details.get('format', 'Unknown'),
+                            'family': ollama_details.get('family', 'Unknown'),
+                            'parameter_size': ollama_details.get('parameter_size', 'Unknown'),
+                            'quantization_level': ollama_details.get('quantization_level', 'Unknown')
+                        }
+                        enriched_model['size'] = model['ollama'].get('size', 0)
+                        enriched_model['modified_at'] = model['ollama'].get('modified_at', '')
+                    # OpenAI-specific details
+                    elif 'openai' in model:
+                        enriched_model['model_type'] = 'OpenAI'
+                        openai_details = model['openai']
+                        enriched_model['details'] = {
+                            'family': 'GPT',
+                            'parameter_size': 'Variable'
+                        }
+                        enriched_model['openai_details'] = {
+                            'id': openai_details.get('id', ''),
+                            'object': openai_details.get('object', ''),
+                            'owned_by': openai_details.get('owned_by', '')
+                        }
+                    # Google-specific details
+                    elif 'Google' in enriched_model['name']:
+                        enriched_model['model_type'] = 'Google'
+                        enriched_model['details'] = {
+                            'family': 'Gemini/PaLM',
+                            'parameter_size': 'Variable'
+                        }
+                    # Perplexity-specific details
+                    elif 'perplexity' in enriched_model['name']:
+                        enriched_model['model_type'] = 'Perplexity'
+                        enriched_model['details'] = {
+                            'family': 'online',
+                            'parameter_size': 'Variable'
+                        }
+                    # Anthropic-specific details
+                    elif 'anthropic' in enriched_model['name'].lower() or 'claude' in enriched_model['name'].lower():
+                        enriched_model['model_type'] = 'Anthropic'
+                        enriched_model['details'] = {
+                            'family': 'Claude',
+                            'parameter_size': 'Variable'
+                        }
+                    enriched_models.append(enriched_model)
+                return enriched_models
+            except ValueError as e:
+                print(f"Error parsing JSON: {e}")
+                return ["{e}"]
+        else:
+            print(f"Failed to fetch models: {response.content}")
+            return ["{response.content}"]
     else:
-        print(f"Failed to fetch models: {response.content}")
+        print(f"Failed to fetch models: connection to API failed")
         return []
 
 def load_analysis_config():
@@ -202,6 +216,7 @@ def save_to_yaml(selected_models):
 # Routes
 @app.route('/')
 def index():
+    config = load_connect_owui(config_file)
     return render_template('index_q.html')
 
 @app.route('/select_comparator', methods=['GET', 'POST'])
@@ -362,9 +377,8 @@ def models():
         save_to_yaml(selected_models)
         return redirect(url_for('models'))
     selected_models = load_selected_models()
-    return render_template('index.html', providers=providers, selected_models=selected_models)
+    return render_template('index.html', models=models, providers=providers, selected_models=selected_models)
 
-import subprocess
 
 @app.route('/run_compare')
 def run_compare():
@@ -383,7 +397,7 @@ def run_anal():
         return render_template('output.html', output=output, script_name="app-anal.py")
     except subprocess.CalledProcessError as e:
         return f"Error executing app-anal.py: {e}", 500
-    
+
 @app.route('/delete_questions', methods=['POST'])
 def delete_questions():
     selected_questions = request.form.getlist('selected_questions')
@@ -398,6 +412,53 @@ def delete_questions():
         if os.path.exists(target_path):
             os.remove(target_path)
     return redirect(url_for('delquestion'))
+
+@app.route('/test_connection', methods=['POST'])
+def test_connection(local = False):
+    config = load_connect_owui(config_file)
+    API_KEY = config['open_webui']['api_key']
+    BASE_URL = config['open_webui']['location']
+
+    if not API_KEY or not BASE_URL:
+        return {'status': 'error', 'message': 'API key and location are required.'}, 400
+
+    try:
+        response = requests.get(f"{BASE_URL}/api/models", headers={'Authorization': f'Bearer {API_KEY}'})
+        if response.status_code == 200:
+            if not local:
+                return {'status': 'success', 'message': 'Connexion réussie!'}
+            else:
+                return True
+        else:
+            if not local:
+                return {'status': 'error', 'message': f"Failed to connect: {response.status_code} - {response.text}"}, response.status_code
+            else:
+                return False
+    except requests.RequestException as e:
+        if not local:
+            return {'status': 'error', 'message': str(e)}, 500
+        else:
+            return False
+
+@app.route('/edit_config', methods=['GET', 'POST'])
+def edit_config():
+    config = load_connect_owui(config_file)
+    message = None
+    category = None
+
+    if request.method == 'POST':
+        new_config = {
+            'open_webui': {
+                'api_key': request.form.get('api_key'),
+                'location': request.form.get('location')
+            }
+        }
+        save_connect_owui(new_config, config_file)
+        config = load_connect_owui(config_file)
+        message = 'Configuration sauvegardée avec succès!'
+        category = 'success'
+
+    return render_template('edit_config.html', config=config, message=message, category=category)
 
 if __name__ == '__main__':
     app.run(debug=True)

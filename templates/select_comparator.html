@@ -64,6 +64,12 @@
   </head>
   <body>
     <h1>Sélection du modèle qui effectue l'analyse</h1>
+    {% if not models %}
+    <div class="error-message">
+        <strong>Erreur : Échec de l'API - Veuillez mettre à jour les informations de connexion</strong>
+        <p><a href="{{ url_for('index') }}">Retour au menu</a></p>
+    </div>
+    {% else %}
     <div class="form-container">
       <form method="post">
         <label for="model">Sélectionnez un modèle :</label>
@@ -76,5 +82,6 @@
       </form>
       <p><a href="{{ url_for('index') }}">Retour au menu</a></p>
     </div>
+    {% endif %}
   </body>
 </html>

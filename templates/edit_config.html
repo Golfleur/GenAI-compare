@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Édition de la configuration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Édition de la configuration</h1>
+
+    {% if message %}
+        <div class="message {{ category }}">{{ message }}</div>
+    {% endif %}
+
+    <p><a href="{{ url_for('index') }}">Retour à l'accueil</a></p>
+
+    <form method="post">
+        <label for="api_key">API Key:</label>
+        <input type="text" id="api_key" name="api_key" value="{{ config.open_webui.api_key if config.open_webui else '' }}" required>
+
+        <label for="location">Location:</label>
+        <input type="text" id="location" name="location" value="{{ config.open_webui.location if config.open_webui else '' }}" required>
+
+        <button type="submit">Sauvegarder</button>
+    </form>
+
+    <form method="post" action="{{ url_for('test_connection') }}">
+        <button type="submit">Tester la connexion</button>
+    </form>
+
+    <div id="connection-status"></div>
+
+    <script>
+        document.querySelector('form[action*="test_connection"]').addEventListener('submit', function(event) {
+            event.preventDefault();
+            fetch(this.action, { method: this.method })
+                .then(response => response.json())
+                .then(data => {
+                    const statusDiv = document.getElementById('connection-status');
+                    const messageClass = data.status === 'success' ? 'success' : 'error';
+                    statusDiv.innerHTML = `<div class="message ${messageClass}">${data.message}</div>`;
+                })
+                .catch(error => console.error('Error:', error));
+        });
+    </script>
+
+    <p><a href="{{ url_for('index') }}">Retour à l'accueil</a></p>
+
+</body>
+</html>
