@@ -21,7 +21,32 @@
 </head>
 <body>
     <h1>Résultats de {{ script_name }}</h1>
-    <pre>{{ output }}</pre>
+    <pre id="output"></pre>
+    <script>
+        const scriptName = "{{ script_name }}";
+        console.log(`Script Name: ${scriptName}`);
+        // Determine endpoint based on the script name
+        let endpoint;
+        if (scriptName === 'app-compare.py') {
+            endpoint = "/events_compare";
+        } else {
+            endpoint = "/events_anal";
+        }
+        console.log(`Connecting to SSE endpoint: ${endpoint}`);
+        const eventSource = new EventSource(endpoint);
+        const outputElement = document.getElementById("output");
+        eventSource.onopen = function() {
+            console.log('Connected to the SSE server.');
+        };
+        eventSource.onmessage = function(event) {
+            console.log(`Received data: ${event.data}`);
+            outputElement.textContent += `${event.data}\n`;
+        };
+        eventSource.onerror = function(event) {
+            console.error('EventSource error:', event);
+            eventSource.close();
+        };
+    </script>
     <a class="button" href="{{ url_for('index') }}">Retour à l'accueil</a>
 </body>
 </html>

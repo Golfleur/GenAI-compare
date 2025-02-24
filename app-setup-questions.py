@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, Response
 import json
 import os
 import yaml
@@ -380,23 +380,23 @@ def models():
     return render_template('index.html', models=models, providers=providers, selected_models=selected_models)
 
 
-@app.route('/run_compare')
-def run_compare():
-    try:
-        result = subprocess.run(["python", "app-compare.py", "--verbose"], capture_output=True, text=True, check=True)
-        output = result.stdout
-        return render_template('output.html', output=output, script_name="app-compare.py")
-    except subprocess.CalledProcessError as e:
-        return f"Error executing app-compare.py: {e}", 500
+#@app.route('/run_compare')
+#def run_compare():
+#    try:
+#        result = subprocess.run(["python", "app-compare.py", "--verbose"], capture_output=True, text=True, check=True)
+#        output = result.stdout
+#        return render_template('output.html', output=output, script_name="app-compare.py")
+#    except subprocess.CalledProcessError as e:
+#        return f"Error executing app-compare.py: {e}", 500
 
-@app.route('/run_anal')
-def run_anal():
-    try:
-        result = subprocess.run(["python", "app-anal.py", "--verbose"], capture_output=True, text=True, check=True)
-        output = result.stdout
-        return render_template('output.html', output=output, script_name="app-anal.py")
-    except subprocess.CalledProcessError as e:
-        return f"Error executing app-anal.py: {e}", 500
+#@app.route('/run_anal')
+#def run_anal():
+#    try:
+#        result = subprocess.run(["python", "app-anal.py", "--verbose"], capture_output=True, text=True, check=True)
+#        output = result.stdout
+#        return render_template('output.html', output=output, script_name="app-anal.py")
+#    except subprocess.CalledProcessError as e:
+#        return f"Error executing app-anal.py: {e}", 500
 
 @app.route('/delete_questions', methods=['POST'])
 def delete_questions():
@@ -459,6 +459,57 @@ def edit_config():
         category = 'success'
 
     return render_template('edit_config.html', config=config, message=message, category=category)
+
+def run_script(script_path):
+    try:
+        process = subprocess.Popen(
+            ["python", "-u", script_path, "--verbose"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            bufsize=1,  # Line buffered
+        )
+        #n = 0
+        while True:
+            #n += 1
+            #print(f"{n}- Attempting to read a line from the output.")
+            output_line = process.stdout.readline()
+            if not output_line:
+                break
+            #print(f"Yielding output line: {output_line}")
+            yield f"data: {output_line}\n\n"
+            # Check if the subprocess has finished after each read
+            if process.poll() is not None:
+                print("Subprocess has completed.")
+                break
+        # Ensure any remaining output is captured and yielded
+        remaining_output = process.stdout.read()
+        if remaining_output:
+            #print(f"Yielding remaining output: {remaining_output}")
+            yield f"data: {remaining_output}\n\n"
+        process.stdout.close()
+        process.terminate()
+        yield "data: Script execution completed.\n\n"
+    except Exception as e:
+        yield f"data: Error occurred: {str(e)}\n\n"
+        if process:
+            process.terminate()
+
+@app.route('/run_compare')
+def run_compare():
+    return render_template('output.html', script_name='app-compare.py')
+
+@app.route('/run_anal')
+def run_anal():
+    return render_template('output.html', script_name='app-anal.py')
+
+@app.route('/events_compare')
+def events_compare():
+    return Response(run_script("app-compare.py"), mimetype='text/event-stream')
+
+@app.route('/events_anal')
+def events_anal():
+    return Response(run_script("app-anal.py"), mimetype='text/event-stream')
 
 if __name__ == '__main__':
     app.run(debug=True)
