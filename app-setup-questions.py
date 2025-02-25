@@ -4,6 +4,7 @@ import os
 import yaml
 import requests
 import subprocess
+import time
 
 app = Flask(__name__)
 
@@ -460,7 +461,7 @@ def edit_config():
 
     return render_template('edit_config.html', config=config, message=message, category=category)
 
-def run_script(script_path):
+def run_script(script_path, check_interval=0.1):
     try:
         process = subprocess.Popen(
             ["python", "-u", script_path, "--verbose"],
@@ -469,31 +470,62 @@ def run_script(script_path):
             universal_newlines=True,
             bufsize=1,  # Line buffered
         )
-        #n = 0
+
         while True:
-            #n += 1
-            #print(f"{n}- Attempting to read a line from the output.")
             output_line = process.stdout.readline()
-            if not output_line:
-                break
-            #print(f"Yielding output line: {output_line}")
-            yield f"data: {output_line}\n\n"
-            # Check if the subprocess has finished after each read
-            if process.poll() is not None:
-                print("Subprocess has completed.")
-                break
-        # Ensure any remaining output is captured and yielded
+
+            # Yield any new output
+            if output_line:
+                yield f"data: {output_line}\n\n"
+            else:
+                # Check if the process is still running
+                if process.poll() is not None:
+                    break
+
+            # Wait for a short time before checking again, to not busy-wait
+            time.sleep(check_interval)
+
+        # Ensure any remaining output is captured and yielded after process ends
         remaining_output = process.stdout.read()
         if remaining_output:
-            #print(f"Yielding remaining output: {remaining_output}")
             yield f"data: {remaining_output}\n\n"
-        process.stdout.close()
-        process.terminate()
-        yield "data: Script execution completed.\n\n"
+
+        # Check the return code to determine if the process was successful
+        return_code = process.wait()
+        if return_code == 0:
+            yield "data: Script execution completed successfully.\n\n"
+        else:
+            yield f"data: Script execution failed with return code {return_code}.\n\n"
+
     except Exception as e:
         yield f"data: Error occurred: {str(e)}\n\n"
+
+    finally:
         if process:
+            process.stdout.close()
             process.terminate()
+        #n = 0
+        #while True:
+        #    #n += 1
+        #    #print(f"{n}- Attempting to read a line from the output.")
+        #    output_line = process.stdout.readline()
+        #    if not output_line:
+        #        break
+        #    #print(f"Yielding output line: {output_line}")
+        #    yield f"data: {output_line}\n\n"
+        #    # Check if the subprocess has finished after each read
+        #    if process.poll() is not None:
+        #        print("Subprocess has compleprocess that listen to the output of teh child script. ted.")
+        #        break
+        # Ensure any remaining output is captured and yielded
+        #remaining_output = process.stdout.read()
+        #if remaining_output:
+        #    #print(f"Yielding remaining output: {remaining_output}")
+        #    yield f"data: {remaining_output}\n\n"
+        #process.stdout.close()
+        #process.terminate()
+        #yield "data: Script execution completed.\n\n"
+
 
 @app.route('/run_compare')
 def run_compare():

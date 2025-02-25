@@ -18,26 +18,35 @@ CONFIG_PATH = './config/config.yaml'
 QUESTIONS_FOLDER = './questions'
 ANSWERS_FOLDER = './answers'
 
+n_questions = 0
+n_models = 0
+
 def load_models(config_path, verbose):
     """Load model names from a YAML configuration file."""
     try:
         with open(config_path, 'r', encoding="utf-8") as file:
             config = yaml.safe_load(file)
         models = config.get('selected_models', [])
+        n_models = len(models)
         if verbose:
-            print(f"Loaded models: {models}")
+            print(f"Loaded {n_models} models: {models}")
+            
+
         return models
     except Exception as e:
         print(f"Error loading models from config: {e}")
         return []
 
-def read_question(file_name, verbose):
+def read_question(file_name, verbose, q, n_questions):
     """Read the question from the specified file."""
     try:
         with open(file_name, 'r', encoding="utf-8") as file:
             question = file.read().strip()
         if verbose:
-            print(f"Question read from '{file_name}': {question}")
+            print("*-*-*-*-*-*-*-*-*")
+            print(f"Question {q}/{n_questions} read from '{file_name}'")
+            #print(f"{question}")
+            
         return question
     except FileNotFoundError:
         print(f"Error: The file {file_name} was not found.")
@@ -71,23 +80,29 @@ def generate_answer(question, model_name, verbose):
     }
 
     if verbose:
-        print(f"\nMaking request to: {url}")
+        print("*-*-*-*-*-*-*-*-*")
+        print(f"Making request to: {url}")
         print(f"Using model: {model_name}")
-        print(f"Headers: {headers}")
+        # print(f"Headers: {headers}")
         print(f"Payload: {json.dumps(payload, indent=2)}")
+        
 
     try:
         response = requests.post(url, headers=headers, json=payload)
         
         if verbose:
+            print("*-*-*-*-*-*-*-*-*")
             print(f"Response status: {response.status_code}")
             print(f"Response headers: {dict(response.headers)}")
+            
 
         response.raise_for_status()
         response_data = response.json()
         
         if verbose:
+            print("*-*-*-*-*-*-*-*-*")
             print(f"Response data: {json.dumps(response_data, indent=2)}\n")
+            
         
         return response_data
 
@@ -111,7 +126,9 @@ def write_answers(file_name, answers, verbose):
         with open(file_name, 'w', encoding="utf-8") as file:
             json.dump(answers, file, indent=2)
         if verbose:
+            print("*-*-*-*-*-*-*-*-*")
             print(f"Answers written to '{file_name}'")
+            
     except Exception as e:
         print(f"Error writing answers to file '{file_name}': {e}")
 
@@ -125,8 +142,11 @@ def process_question_files(verbose):
     try:
         with open(config_yaml_path, 'r', encoding='utf-8') as stream:
             selected_questions = yaml.safe_load(stream) or []
+            n_questions = len(selected_questions)
             if verbose:
-                print(f"Loaded selected questions: {selected_questions}")
+                print("*-*-*-*-*-*-*-*-*")
+                print(f"There are {n_questions} questions loaded : {selected_questions}")
+                
     except (FileNotFoundError, yaml.YAMLError) as e:
         if verbose:
             print(f"YAML file not found or error reading YAML file: {e}. Defaulting to all questions.")
@@ -134,22 +154,30 @@ def process_question_files(verbose):
 
     # Load models
     models = load_models(CONFIG_PATH, verbose)
+    n_models = len(models)
     if not models:
         print("No models found in configuration.")
         return
 
     if verbose:
-        print(f"\nStarting processing")
+        print("*-*-*-*-*-*-*-*-*")
         print(f"Looking for questions in: {QUESTIONS_FOLDER}")
         print(f"Will save answers in: {ANSWERS_FOLDER}")
+        
 
     # Process each model
+    n=0
     for model_name in models:
+        n=n+1
         if verbose:
-            print(f"\nProcessing all questions for model '{model_name}'")
+            print("*-*-*-*-*-*-*-*-*")
+            print(f"Processing all {n_questions} questions for model {n}/{n_models}:'{model_name}'")
+            
 
         # Process each question file
+        q=0
         for q_file in os.listdir(QUESTIONS_FOLDER):
+            
             if q_file.endswith('.q'):
                 q_name = os.path.splitext(q_file)[0]
 		# Check if this question is listed in the YAML file, if it exists
@@ -157,11 +185,13 @@ def process_question_files(verbose):
                     if verbose:
                         print(f"Skipping question '{q_name}' as it is not listed in selected questions")
                     continue
+                q=q+1
                 if verbose:
-                    print(f"\nProcessing question file: {q_file}")
-
+                    print("*-*-*-*-*-*-*-*-*")
+                    print(f"Processing question {q}/{n_questions}: {q_file}")
+                    
                 q_path = os.path.join(QUESTIONS_FOLDER, q_file)
-                question = read_question(q_path, verbose)
+                question = read_question(q_path, verbose,q,n_questions)
 
                 if question:
                     output_file = os.path.join(ANSWERS_FOLDER, f"{os.path.splitext(q_file)[0]}.a")
@@ -173,7 +203,9 @@ def process_question_files(verbose):
                             with open(output_file, 'r', encoding="utf-8") as file:
                                 existing_answers = json.load(file)
                             if verbose:
-                                print(f"Loaded existing answers from {output_file}")
+                                print("*-*-*-*-*-*-*-*-*")
+                                print(f"Loaded existing answers from other models for question {q}/{n_questions} from {output_file}")
+                                
                         except Exception as e:
                             print(f"Error loading existing answers from '{output_file}': {e}")
 
@@ -182,10 +214,12 @@ def process_question_files(verbose):
                     if answer is not None:
                         existing_answers[model_name] = answer
                         if verbose:
-                            print(f"Saving answers for question '{q_file}' with model '{model_name}'")
+                            print("*-*-*-*-*-*-*-*-*")
+                            print(f"Saving answers for question {q}/{n_questions}-'{q_file}' with model {n}/{n_models}-'{model_name}'")
+                            
                         write_answers(output_file, existing_answers, verbose)
                     else:
-                        print(f"No answer generated for question '{q_file}' with model '{model_name}'.")
+                        print(f"No answer generated for question {q}-'{q_file}' with model {n} '{model_name}'.")
 
 def main():
     parser = argparse.ArgumentParser(description="Process question files and generate complete responses.")
