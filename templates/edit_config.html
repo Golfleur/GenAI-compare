@@ -62,7 +62,7 @@
 
     <p><a href="{{ url_for('index') }}">Retour à l'accueil</a></p>
 
-    <form method="post">
+    <form method="post" onsubmit="removeTrailingSlash()">
         <label for="api_key">API Key:</label>
         <input type="text" id="api_key" name="api_key" value="{{ config.open_webui.api_key if config.open_webui else '' }}" required>
 
@@ -79,6 +79,12 @@
     <div id="connection-status"></div>
 
     <script>
+        function removeTrailingSlash() {
+            const locationInput = document.getElementById('location');
+            if (locationInput.value.endsWith('/')) {
+                locationInput.value = locationInput.value.slice(0, -1);
+            }
+        }
         document.querySelector('form[action*="test_connection"]').addEventListener('submit', function(event) {
             event.preventDefault();
             fetch(this.action, { method: this.method })
