@@ -97,6 +97,7 @@ def fetch_models():
             try:
                 response_data = response.json()
                 models_data = response_data.get('data', [])
+                models_data.sort(key=lambda x: x.get('name', ''))
                 enriched_models = []
                 for model in models_data:
                     # Base model information
@@ -148,14 +149,21 @@ def fetch_models():
                     elif 'perplexity' in enriched_model['name']:
                         enriched_model['model_type'] = 'Perplexity'
                         enriched_model['details'] = {
-                            'family': 'online',
+                            'family': 'Perplexity',
                             'parameter_size': 'Variable'
-                        }
+                        }                     
                     # Anthropic-specific details
                     elif 'anthropic' in enriched_model['name'].lower() or 'claude' in enriched_model['name'].lower():
                         enriched_model['model_type'] = 'Anthropic'
                         enriched_model['details'] = {
                             'family': 'Claude',
+                            'parameter_size': 'Variable'
+                        }
+                    # Mistral-specific details
+                    elif 'mistral' in enriched_model['name'].lower():
+                        enriched_model['model_type'] = 'Mistral'
+                        enriched_model['details'] = {
+                            'family': 'Mistral',
                             'parameter_size': 'Variable'
                         }
                     enriched_models.append(enriched_model)
@@ -352,12 +360,13 @@ def models():
     models = fetch_models()
     # Organize models by provider
     providers = {
-        'Google': [],
+        'Ollama - Offine': [],
         'Anthropic': [],
+        'Google': [],
         'OpenAI': [],
+        'Mistral': [],
         'Perplexity': [],
-        'Ollama': [],
-        'Other':[]
+        'Autre':[]
     }
     for model in models:
         model_name = model['name'].lower()
@@ -365,39 +374,22 @@ def models():
             providers['Google'].append(model)
         elif 'anthropic' in model_name or 'claude' in model_name:
             providers['Anthropic'].append(model)
-        elif 'perplexity' in model_name or 'sonar' in model_name:
+        elif 'perplexity' in model_name:
             providers['Perplexity'].append(model)
-        elif model.get('model_type') == 'OpenAI' or 'gpt' in model_name:
+        elif model.get('model_type') == 'OpenAI':
             providers['OpenAI'].append(model)
         elif model.get('model_type') == 'Ollama':
-            providers['Ollama'].append(model)
+            providers['Ollama - Offine'].append(model)
+        elif 'mistral' in model_name or model.get('model_type') == 'Mistral':
+            providers['Mistral'].append(model)
         else:
-            providers['Other'].append(model)
+            providers['Autre'].append(model)
     if request.method == 'POST':
         selected_models = request.form.getlist('models')
         save_to_yaml(selected_models)
         return redirect(url_for('models'))
     selected_models = load_selected_models()
     return render_template('index.html', models=models, providers=providers, selected_models=selected_models)
-
-
-#@app.route('/run_compare')
-#def run_compare():
-#    try:
-#        result = subprocess.run(["python", "app-compare.py", "--verbose"], capture_output=True, text=True, check=True)
-#        output = result.stdout
-#        return render_template('output.html', output=output, script_name="app-compare.py")
-#    except subprocess.CalledProcessError as e:
-#        return f"Error executing app-compare.py: {e}", 500
-
-#@app.route('/run_anal')
-#def run_anal():
-#    try:
-#        result = subprocess.run(["python", "app-anal.py", "--verbose"], capture_output=True, text=True, check=True)
-#        output = result.stdout
-#        return render_template('output.html', output=output, script_name="app-anal.py")
-#    except subprocess.CalledProcessError as e:
-#        return f"Error executing app-anal.py: {e}", 500
 
 @app.route('/delete_questions', methods=['POST'])
 def delete_questions():
@@ -504,29 +496,7 @@ def run_script(script_path, check_interval=0.1):
         if process:
             process.stdout.close()
             process.terminate()
-        #n = 0
-        #while True:
-        #    #n += 1
-        #    #print(f"{n}- Attempting to read a line from the output.")
-        #    output_line = process.stdout.readline()
-        #    if not output_line:
-        #        break
-        #    #print(f"Yielding output line: {output_line}")
-        #    yield f"data: {output_line}\n\n"
-        #    # Check if the subprocess has finished after each read
-        #    if process.poll() is not None:
-        #        print("Subprocess has compleprocess that listen to the output of teh child script. ted.")
-        #        break
-        # Ensure any remaining output is captured and yielded
-        #remaining_output = process.stdout.read()
-        #if remaining_output:
-        #    #print(f"Yielding remaining output: {remaining_output}")
-        #    yield f"data: {remaining_output}\n\n"
-        #process.stdout.close()
-        #process.terminate()
-        #yield "data: Script execution completed.\n\n"
-
-
+        
 @app.route('/run_compare')
 def run_compare():
     return render_template('output.html', script_name='app-compare.py')
