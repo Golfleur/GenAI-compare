@@ -8,6 +8,7 @@ import datetime
 
 THINK_MARKER_TO_BE_IGNORED = True
 DO_NOT_ADD_A_SYSTEM_PROMPT = True
+ADD_CITATIONS_TO_ANSWER = False
 
 def load_connect_owui(file_path):
     with open(file_path, 'r') as file:
@@ -194,17 +195,17 @@ def main(verbose=False):
                 else:
                     answer_date_unix = None
                 
-                answer_citations = ""
-                c=0
-                if 'citations' in model_data:
-                    for citation_text in model_data['citations']:
-                        c=c+1
-                        answer_citations = answer_citations + "\n" + f"citation[{c}]: "+ citation_text
-                    answer_citations = answer_citations + "\n"
-                else:
-                    answer_citations = "\n"
-                
-                answer_text = answer_text + answer_citations
+                if ADD_CITATIONS_TO_ANSWER:
+                    answer_citations = ""
+                    c=0
+                    if 'citations' in model_data:
+                        for citation_text in model_data['citations']:
+                            c=c+1
+                            answer_citations = answer_citations + "\n" + f"citation[{c}]: "+ citation_text
+                        answer_citations = answer_citations + "\n"
+                    else:
+                        answer_citations = "\n"
+                    answer_text = answer_text + answer_citations
 
                 if THINK_MARKER_TO_BE_IGNORED:
                     answer_text = re.sub(r'<think>.*?</think>', '', answer_text, flags=re.DOTALL)
