@@ -4,6 +4,7 @@ import json
 import os
 import argparse
 
+MODELS_SUPPORTING_CITATIONS =  ["perplexity","claude"]
 
 def load_connect_owui(file_path):
     with open(file_path, 'r', encoding="utf-8") as file:
@@ -74,10 +75,19 @@ def generate_answer(question, model_name, verbose):
         'Accept': 'application/json'
     }
     
-    payload = {
+    if any(name in model_name.lower() for name in MODELS_SUPPORTING_CITATIONS):
+        payload = {
+            'model': model_name,
+            'messages': [{'role': 'user', 'content': question}],
+            'stream': False,
+            'return_citations':True,
+        }
+    else:
+        payload = {
         'model': model_name,
-        'messages': [{'role': 'user', 'content': question}]
-    }
+        'messages': [{'role': 'user', 'content': question}],
+        'stream': False,
+        }
 
     if verbose:
         print("*-*-*-*-*-*-*-*-*")

@@ -77,7 +77,8 @@ def get_analysis_response(question, candidate_answer, target_answer, infos_cruci
             'model': analysis_model,
             'messages': [
                 {'role': 'user', 'content': prompt}
-            ]
+            ],
+            'stream':False,
         }
     else:
         data = {
@@ -95,12 +96,6 @@ def get_analysis_response(question, candidate_answer, target_answer, infos_cruci
         # print(f"Headers: {headers}")
         print(f"Response data: {json.dumps(data, indent=2)}")
         
-    # if verbose:
-        # print(f"\nMaking request to: {API_URL}")
-        # print(f"Using model: {analysis_model}")
-        # print(f"headers: {headers}")
-        # print(f"data: {data}")
-
     try:
         response = requests.post(API_URL, headers=headers, json=data)
         if verbose:
@@ -159,7 +154,8 @@ def main(verbose=False):
             infos_cruciales = target_data.get('infos_cruciales', '')
             infos_a_eviter = target_data.get('infos_a_eviter', '')
 
-            report = f"(c) 2025 Lavery De Billy S.E.N.C.R.L.\n"
+            #report = "(c) 2025 Lavery De Billy S.E.N.C.R.L.\n"
+            report = ""
             report += f"*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n"
             report += f"Analyse pour {base_name}\n"
             report += f"Question:\n"
@@ -191,11 +187,24 @@ def main(verbose=False):
                     print(f"Processing response from model {n}/{n_models}-{model} for question {q}/{n_questions}-{base_name}")
                 
                 answer_text = model_data['choices'][0]['message']['content']
+                
                 if 'created' in model_data:
                     answer_date_unix = model_data['created']
                 else:
                     answer_date_unix = None
                 
+                answer_citations = ""
+                c=0
+                if 'citations' in model_data:
+                    for citation_text in model_data['citations']:
+                        c=c+1
+                        answer_citations = answer_citations + "\n" + f"citation[{c}]: "+ citation_text
+                    answer_citations = answer_citations + "\n"
+                else:
+                    answer_citations = "\n"
+                
+                answer_text = answer_text + answer_citations
+
                 if THINK_MARKER_TO_BE_IGNORED:
                     answer_text = re.sub(r'<think>.*?</think>', '', answer_text, flags=re.DOTALL)
 
@@ -223,8 +232,8 @@ def main(verbose=False):
                 if verbose:
                     print("*-*-*-*-*-*-*-*-*")
                     print(f"Processed response from model {n}/{n_models}-{model} for question {q}/{n_questions}-{base_name}")
-                    
-            report += f"(c) 2025 Lavery De Billy S.E.N.C.R.L.\n"
+
+            #report += "(c) 2025 Lavery De Billy S.E.N.C.R.L."
             analysis_filename = os.path.join(analysis_dir, question_file.replace('.q', '.txt'))
             with open(analysis_filename, 'w', encoding='utf-8') as f:
                 f.write(report)
