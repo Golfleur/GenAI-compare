@@ -86,7 +86,8 @@ def get_analysis_response(question, candidate_answer, target_answer, infos_cruci
             'messages': [
                 {'role': 'system', 'content': "Tu fournis une évaluation en français de la qualité de la réponse par rapport à la cible."},
                 {'role': 'user', 'content': prompt}
-            ]
+            ],
+            'stream':False,
         }
 
     if verbose:
