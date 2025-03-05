@@ -1,4 +1,4 @@
-flask
+streamlit
 requests
 PyYAML
 requests
