@@ -7,6 +7,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
+import streamlit.components.v1 as components
 
 # Ensure directories exist for storing files
 os.makedirs('./questions', exist_ok=True)
@@ -273,7 +274,6 @@ if page == "Home":
         if st.button("Run Compare Script", key="run_compare"):
             st.info("Running comparison script...")
             output_placeholder = st.empty()
-            
             process = subprocess.Popen(
                 ["python", "-u", "app-compare.py", "--verbose"],
                 stdout=subprocess.PIPE,
@@ -281,7 +281,6 @@ if page == "Home":
                 universal_newlines=True,
                 bufsize=1
             )
-            
             # Display output in real-time
             output_text = ""
             while True:
@@ -291,7 +290,6 @@ if page == "Home":
                 if output_line:
                     output_text += output_line
                     output_placeholder.text_area("Output:", output_text, height=400)
-                    
             return_code = process.poll()
             if return_code == 0:
                 st.success("Script executed successfully!")
@@ -401,7 +399,7 @@ elif page == "Edit Questions":
     st.title("Edit Questions")
     
     question_files = [f[:-2] for f in os.listdir('./questions') if f.endswith('.q')]
-    question_files.sort()
+    question_files.sort(key=str.lower)
     
     if not question_files:
         st.info("No questions found. Add some questions first.")
@@ -432,7 +430,7 @@ elif page == "Delete Questions":
     st.title("Delete Questions")
     
     question_files = [f[:-2] for f in os.listdir('./questions') if f.endswith('.q')]
-    question_files.sort()
+    question_files.sort(key=str.lower)
     
     if not question_files:
         st.info("No questions found. Add some questions first.")
@@ -454,23 +452,24 @@ elif page == "Delete Questions":
                         os.remove(target_path)
                 
                 st.success(f"Deleted {len(selected_questions)} question(s) successfully!")
-                st.experimental_rerun()
+                st.rerun()
 
 # --- SELECT QUESTIONS PAGE ---
 elif page == "Select Questions":
     st.title("Select Questions for Analysis")
     
     question_files = [f[:-2] for f in os.listdir('./questions') if f.endswith('.q')]
-    question_files.sort()
+    question_files.sort(key=str.lower)
     
     if not question_files:
         st.info("No questions found. Add some questions first.")
     else:
         selected_questions = load_selected_questions()
+        valid_selected_questions = [q for q in selected_questions if q in question_files]
         new_selected_questions = st.multiselect(
             "Select questions for analysis",
             question_files,
-            default=selected_questions
+            default=valid_selected_questions
         )
         
         if st.button("Save Selection"):
@@ -482,7 +481,7 @@ elif page == "Manual Entry":
     st.title("Manual Answer Entry")
     
     questions = list_questions()
-    questions.sort()
+    questions.sort(key=lambda x: x['nom_question'].lower())
     
     if not questions:
         st.info("No questions found. Add some questions first.")
