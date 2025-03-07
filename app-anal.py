@@ -5,7 +5,6 @@ import requests
 import yaml
 import re
 import datetime
-# import markdown
 from pathlib import Path
 
 THINK_MARKER_TO_BE_IGNORED = True
@@ -14,8 +13,36 @@ ADD_CITATIONS_TO_ANSWER = False
 CONFIG_PATH = './config/config.yaml'
 
 def load_connect_owui(file_path):
-    with open(file_path, 'r') as file:
-        return yaml.safe_load(file)
+    """Load the configuration file and return the active configuration"""
+    try:
+        with open(file_path, 'r', encoding="utf-8") as file:
+            config_data = yaml.safe_load(file)
+        
+        # Check if the file contains the configs list structure
+        if isinstance(config_data, dict) and 'configs' in config_data:
+            configs = config_data.get('configs', [])
+            
+            # Look for active configuration
+            for config in configs:
+                if config.get('active', False):
+                    print(f"Using active configuration: {config.get('name', 'Unnamed')}")
+                    return config
+            
+            # If no active config is marked, return the first one
+            if configs:
+                print(f"Using default configuration: {configs[0].get('name', 'Unnamed')}")
+                return configs[0]
+            
+            print("No configurations found in the config file")
+            return {}
+        else:
+            # Handle old format for backward compatibility
+            print("Using legacy config format")
+            return config_data
+            
+    except Exception as e:
+        print(f"Error loading configuration: {e}")
+        return {}
 
 def load_config():
     """Load existing configuration from the YAML file."""
@@ -41,17 +68,27 @@ def read_json_file(file_path):
         return json.load(file)
 
 def get_analysis_response(question, candidate_answer, target_answer, infos_cruciales, infos_a_eviter, analysis_model, verbose):
-    CONFIG_PATH = './config/config.yaml'
+    # Load the active configuration
     config = load_connect_owui('./config/connect-owui.yaml')
-    API_KEY = config['open_webui']['api_key']
-    BASE_URL = config['open_webui']['location']
-    API_URL = f"{BASE_URL}/api/chat/completions"
     
+    # Extract API credentials from the selected configuration
+    if 'open_webui' in config:
+        API_KEY = config['open_webui'].get('api_key', '')
+        BASE_URL = config['open_webui'].get('location', '')
+    else:
+        print("Warning: Invalid configuration format. Missing 'open_webui' section.")
+        return "Error: Invalid configuration format"
+    
+    # Print the active configuration for debugging
+    print(f"Using configuration: {config.get('name', 'Unnamed')} for analysis")
+    
+    API_URL = f"{BASE_URL}/api/chat/completions"
     headers = {
         'Authorization': f'Bearer {API_KEY}',
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     }
+    
     prompt = (
         f"--------------------------------------------------------\n"
         f"Question qui a été posée au modèle d'IA:\n {question}\n"
@@ -65,13 +102,14 @@ def get_analysis_response(question, candidate_answer, target_answer, infos_cruci
         f"Informations à éviter:\n {infos_a_eviter}."
         f"--------------------------------------------------------\n"
     )
+    
     if DO_NOT_ADD_A_SYSTEM_PROMPT:
         data = {
             'model': analysis_model,
             'messages': [
                 {'role': 'user', 'content': prompt}
             ],
-            'stream':False,
+            'stream': False,
         }
     else:
         data = {
@@ -80,19 +118,22 @@ def get_analysis_response(question, candidate_answer, target_answer, infos_cruci
                 {'role': 'system', 'content': "Tu fournis une évaluation en français de la qualité de la réponse par rapport à la cible."},
                 {'role': 'user', 'content': prompt}
             ],
-            'stream':False,
+            'stream': False,
         }
+    
     if verbose:
         print("*-*-*-*-*-*-*-*-*")
         print(f"Making request to: {API_URL}")
         print(f"Using model: {analysis_model}")
         print(f"Response data: {json.dumps(data, indent=2)}")
+    
     try:
         response = requests.post(API_URL, headers=headers, json=data)
         if verbose:
             print("*-*-*-*-*-*-*-*-*")
             print(f"Response status: {response.status_code}")
             print(f"Response headers: {dict(response.headers)}")
+        
         response.raise_for_status()
         return response.json()['choices'][0]['message']['content']
     except requests.exceptions.RequestException as e:
@@ -116,8 +157,9 @@ def main(verbose=False):
     answers_dir = './answers'
     targets_dir = './targets'
     analysis_dir = './analysis'
-    
     os.makedirs(analysis_dir, exist_ok=True)
+    
+    # Load the analysis model
     analysis_model = load_analysis_model()
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     
@@ -176,7 +218,7 @@ def main(verbose=False):
         <h2>Questions Analyzed</h2>
     """
     
-    q=0
+    q = 0
     for question_file in os.listdir(questions_dir):
         if question_file.endswith('.q'):
             base_name = question_file[:-2]
@@ -193,7 +235,7 @@ def main(verbose=False):
                     print(f"Skipping {base_name} because the answer file {answer_path} does not exist.")
                 continue
                 
-            q=q+1
+            q = q + 1
             target_path = os.path.join(targets_dir, question_file.replace('.q', '.t'))
             question = read_file_content(question_path)
             target_data = read_json_file(target_path)
@@ -290,11 +332,11 @@ def main(verbose=False):
             html_summary += f'<div class="question-card"><h3>{base_name}</h3><p>{question[:200]}...</p><p><a href="./analysis/{base_name}.html">View detailed analysis</a></p></div>'
             
             answers_data = read_json_file(answer_path)
-            n=0
+            n = 0
             n_models = len(answers_data)
             
             for model, model_data in answers_data.items():
-                n=n+1
+                n = n + 1
                 if verbose:
                     print("*-*-*-*-*-*-*-*-*")
                     print(f"Processing response from model {n}/{n_models}-{model} for question {q}/{n_questions}-{base_name}")
@@ -310,11 +352,11 @@ def main(verbose=False):
                 
                 if ADD_CITATIONS_TO_ANSWER:
                     answer_citations = ""
-                    c=0
+                    c = 0
                     if 'citations' in model_data:
                         for citation_text in model_data['citations']:
-                            c=c+1
-                            answer_citations = answer_citations + "\n" + f"citation[{c}]: "+ citation_text
+                            c = c + 1
+                            answer_citations = answer_citations + "\n" + f"citation[{c}]: " + citation_text
                         answer_citations = answer_citations + "\n"
                     else:
                         answer_citations = "\n"
@@ -410,7 +452,7 @@ def main(verbose=False):
             json_filename = os.path.join(analysis_dir, f"{base_name}.json")
             with open(json_filename, 'w', encoding='utf-8') as f:
                 json.dump(question_data, f, indent=2, ensure_ascii=False)
-            
+                
             # Add to summary
             summary_data["questions"].append(question_data)
             
@@ -433,7 +475,7 @@ def main(verbose=False):
         
     with open(os.path.join(analysis_dir, f"summary_{timestamp}.json"), 'w', encoding='utf-8') as f:
         json.dump(summary_data, f, indent=2, ensure_ascii=False)
-    
+        
     if verbose:
         print("*-*-*-*-*-*-*-*-*")
         print(f"Analysis complete. Summary saved to {analysis_dir}/summary_{timestamp}.[md/html/json]")

@@ -9,31 +9,102 @@ from pathlib import Path
 import pandas as pd
 import streamlit.components.v1 as components
 
+# This must be the first Streamlit command
+st.set_page_config(
+    page_title="GenAI Performance Comparator",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Configuration paths and settings
+CONFIG_PATH_ = './config/config.yaml'
+config_file = './config/connect-owui.yaml'
+
 # Ensure directories exist for storing files
 os.makedirs('./questions', exist_ok=True)
 os.makedirs('./targets', exist_ok=True)
 os.makedirs('./answers', exist_ok=True)
 os.makedirs('./config', exist_ok=True)
+if not os.path.exists(config_file):
+    # Create an empty config file if it doesn't exist
+    with open(config_file, 'w', encoding='utf-8') as f:
+        yaml.dump({'configs': []}, f)
 
-# --- Configuration Functions ---
-def load_connect_owui(file_path):
+# Initialize session state variables
+if 'show_new_config_form' not in st.session_state:
+    st.session_state.show_new_config_form = False
+
+def load_all_configs(file_path):
     try:
-        with open(file_path, 'r', encoding="utf-8") as file:
-            return yaml.safe_load(file) or {}
-    except (FileNotFoundError, yaml.YAMLError):
-        return {}
+        with open(file_path, 'r', encoding='utf-8') as file:
+            config_data = yaml.safe_load(file)
+            if isinstance(config_data, dict) and 'configs' in config_data:
+                configs = config_data.get('configs', [])
+                # Ensure all configs are dictionaries
+                return [c for c in configs if isinstance(c, dict)]
+            else:
+                print(f"Config data doesn't have expected structure: {config_data}")
+                return []
+    except (FileNotFoundError, yaml.YAMLError) as e:
+        print(f"Error loading configs: {e}")
+        return []
 
-def save_connect_owui(config, file_path):
-    with open(file_path, 'w') as file:
-        yaml.dump(config, file)
+# Load configurations
+all_configs = load_all_configs(config_file)
+config_names = []
+if all_configs:
+    for c in all_configs:
+        if isinstance(c, dict):
+            config_names.append(c.get('name', 'Unnamed Config'))
+        else:
+            config_names.append(f"Invalid config: {str(c)[:20]}")
+current_config_index = 0
+config = all_configs[current_config_index] if all_configs and all_configs else {}
 
-# Configuration paths and settings
-CONFIG_PATH = './config/config.yaml'
-config_file = './config/connect-owui.yaml'
-config = load_connect_owui(config_file)
+# Set API variables based on config
 API_KEY = config.get('open_webui', {}).get('api_key', '')
 BASE_URL = config.get('open_webui', {}).get('location', '')
 API_URL = f"{BASE_URL}/api/models" if BASE_URL else ""
+
+def save_all_configs(configs, file_path):
+    """Save configurations preserving active flags"""
+    with open(file_path, 'w', encoding='utf-8') as file:
+        yaml.dump({'configs': configs}, file)
+
+def initialize_session_state():
+    """Initialize session state variables if they don't exist"""
+    if 'selected_config_name' not in st.session_state:
+        # Load all configs
+        all_configs = load_all_configs(config_file)
+        config_names = [c.get('name', f'Unnamed Config {i}') for i, c in enumerate(all_configs)] if all_configs else []
+        # Set default to first config if available
+        st.session_state.selected_config_name = config_names[0] if config_names else None
+        
+# Call this function at the start
+initialize_session_state()
+
+def get_current_config():
+    """Get the currently selected configuration"""
+    all_configs = load_all_configs(config_file)
+    if not all_configs:
+        return {}
+        
+    # Find the config with the selected name
+    selected_name = st.session_state.selected_config_name
+    for config in all_configs:
+        if config.get('name') == selected_name:
+            return config
+            
+    # Fallback to first config if selected name not found
+    return all_configs[0] if all_configs else {}
+    
+def get_api_credentials():
+    """Get API credentials from the current configuration"""
+    config = get_current_config()
+    api_key = config.get('open_webui', {}).get('api_key', '')
+    base_url = config.get('open_webui', {}).get('location', '')
+    return api_key, base_url
 
 # --- Question Management Functions ---
 def save_question(nom_question, question_content):
@@ -73,9 +144,6 @@ def load_selected_questions():
     except (FileNotFoundError, yaml.YAMLError):
         return []
 
-def list_questions():
-    return [f[:-2] for f in os.listdir('./questions') if f.endswith('.q')]
-
 def save_manual_answer(question_name, answer_content, source):
     answer_path = f'./answers/{question_name}.a'
     manual_entry = {source: {'choices': [{'message': {'content': answer_content}}]}}
@@ -89,14 +157,15 @@ def save_manual_answer(question_name, answer_content, source):
 
 # --- Model Management Functions ---
 def test_connection(local=False):
-    config = load_connect_owui(config_file)
-    API_KEY = config.get('open_webui', {}).get('api_key', '')
-    BASE_URL = config.get('open_webui', {}).get('location', '')
-    if not API_KEY or not BASE_URL:
-        if not local:
-            return {'status': 'error', 'message': 'API key and location are required.'}
-        return False
     try:
+        # Get credentials from the current configuration
+        API_KEY, BASE_URL = get_api_credentials()
+        
+        if not API_KEY or not BASE_URL:
+            if not local:
+                return {'status': 'error', 'message': 'API key and location are required.'}
+            return False
+            
         response = requests.get(f"{BASE_URL}/api/models", headers={'Authorization': f'Bearer {API_KEY}'})
         if response.status_code == 200:
             if not local:
@@ -112,10 +181,10 @@ def test_connection(local=False):
         return False
 
 def fetch_models():
-    config = load_connect_owui(config_file)
-    API_KEY = config.get('open_webui', {}).get('api_key', '')
-    BASE_URL = config.get('open_webui', {}).get('location', '')
+    # Get credentials from the current configuration
+    API_KEY, BASE_URL = get_api_credentials()
     API_URL = f"{BASE_URL}/api/models"
+    
     if test_connection(True):
         headers = {'Authorization': f'Bearer {API_KEY}'}
         response = requests.get(API_URL, headers=headers)
@@ -205,8 +274,8 @@ def fetch_models():
         return []
 
 def load_analysis_config():
-    if os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
+    if os.path.exists(CONFIG_PATH_):
+        with open(CONFIG_PATH_, 'r', encoding="utf-8") as file:
             try:
                 return yaml.safe_load(file) or {}
             except yaml.YAMLError:
@@ -217,12 +286,12 @@ def load_analysis_config():
 def save_analysis_model(selected_model):
     current_config = load_analysis_config()
     current_config['analysis_model'] = selected_model
-    with open(CONFIG_PATH, 'w', encoding="utf-8") as file:
+    with open(CONFIG_PATH_, 'w', encoding="utf-8") as file:
         yaml.dump(current_config, file)
 
 def load_selected_models():
-    if os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
+    if os.path.exists(CONFIG_PATH_):
+        with open(CONFIG_PATH_, 'r', encoding="utf-8") as file:
             try:
                 config = yaml.safe_load(file)
                 return config.get("selected_models", [])
@@ -234,8 +303,8 @@ def load_selected_models():
 def save_to_yaml(selected_models):
     # Load the existing configuration
     current_config = {}
-    if os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
+    if os.path.exists(CONFIG_PATH_):
+        with open(CONFIG_PATH_, 'r', encoding="utf-8") as file:
             try:
                 current_config = yaml.safe_load(file) or {}
             except yaml.YAMLError:
@@ -243,44 +312,48 @@ def save_to_yaml(selected_models):
     # Update the selected models
     current_config['selected_models'] = selected_models
     # Write the updated configuration back to the YAML file
-    with open(CONFIG_PATH, 'w', encoding="utf-8") as file:
+    with open(CONFIG_PATH_, 'w', encoding="utf-8") as file:
         yaml.dump(current_config, file)
-
-# --- Streamlit UI ---
-st.set_page_config(
-    page_title="LLM Question Management",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.radio(
-    "Choose a page", 
-    ["Home", "Add Question", "View Questions", "Edit Questions", "Delete Questions", 
-     "Select Questions", "Manual Entry", "Models", "Select Comparator", "Configuration", "View Analysis"]
-)
+if st.session_state.selected_config_name:
+    st.sidebar.info(f"Active Config: {st.session_state.selected_config_name}")
+else:
+    st.sidebar.warning("No configuration selected")
 
+page = st.sidebar.radio(
+    "Choose a page",
+    ["Perform comparison", "Add Question", "View Questions", "Edit Questions", "Delete Questions",
+     "Select Questions", "Manual Entry", "Models", "Select Comparator", "Configuration", "View Analysis","Manage Analysis Files"]
+)
 # --- HOME PAGE ---
-if page == "Home":
-    st.title("LLM Question Management System")
-    st.write("Welcome to the LLM Question Management System. Use the sidebar to navigate.")
+if page == "Perform comparison":
+    st.title("Performance Analyser for Generative AI models ")
+    st.write("Use the sidebar to navigate.\n\nFirst, make sure to enter your Configuration\n\nYou must also setup at least one question\n\nThen, select which Models are to be compared and select a Comparator model that will perform the analysis of the answers")
+    
+    # Display current configuration
+    current_config = st.session_state.selected_config_name
+    st.info(f"Using configuration: {current_config}" if current_config else "No configuration selected")
     
     col1, col2 = st.columns(2)
-    
     with col1:
         st.subheader("Run Comparison")
         if st.button("Run Compare Script", key="run_compare"):
             st.info("Running comparison script...")
             output_placeholder = st.empty()
+            
+            # Simple command without config argument
+            command = ["python", "-u", "app-compare.py", "--verbose"]
+            
             process = subprocess.Popen(
-                ["python", "-u", "app-compare.py", "--verbose"],
+                command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
                 bufsize=1
             )
+            
             # Display output in real-time
             output_text = ""
             while True:
@@ -290,20 +363,23 @@ if page == "Home":
                 if output_line:
                     output_text += output_line
                     output_placeholder.text_area("Output:", output_text, height=400)
+            
             return_code = process.poll()
             if return_code == 0:
                 st.success("Script executed successfully!")
             else:
                 st.error(f"Script execution failed with return code {return_code}")
-    
     with col2:
         st.subheader("Run Analysis")
         if st.button("Run Analysis Script", key="run_analysis"):
-            st.info("Running analysis script...")
+            st.info("Running comparison script...")
             output_placeholder = st.empty()
             
+            # Simple command without config argument
+            command = ["python", "-u", "app-anal.py", "--verbose"]
+            
             process = subprocess.Popen(
-                ["python", "-u", "app-anal.py", "--verbose"],
+                command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
@@ -319,13 +395,12 @@ if page == "Home":
                 if output_line:
                     output_text += output_line
                     output_placeholder.text_area("Output:", output_text, height=400)
-                    
+            
             return_code = process.poll()
             if return_code == 0:
                 st.success("Script executed successfully!")
             else:
-                st.error(f"Script execution failed with return code {return_code}")
-
+                st.error(f"Script execution failed with return code {return_code}")                       
 # --- ADD QUESTION PAGE ---
 elif page == "Add Question":
     st.title("Add New Question")
@@ -480,8 +555,8 @@ elif page == "Select Questions":
 elif page == "Manual Entry":
     st.title("Manual Answer Entry")
     
-    questions = list_questions()
-    questions.sort(key=lambda x: x['nom_question'].lower())
+    questions = [f[:-2] for f in os.listdir('./questions') if f.endswith('.q')]
+    questions.sort(key=str.lower)
     
     if not questions:
         st.info("No questions found. Add some questions first.")
@@ -682,29 +757,184 @@ elif page == "Select Comparator":
 elif page == "Configuration":
     st.title("Configuration")
     
-    config = load_connect_owui(config_file)
-    api_key = config.get('open_webui', {}).get('api_key', '')
-    location = config.get('open_webui', {}).get('location', '')
+    # Load all configurations
+    all_configs = load_all_configs(config_file)
+    config_names = [c['name'] for c in all_configs] if all_configs else []
     
-    new_api_key = st.text_input("API Key", value=api_key, type="password")
-    new_location = st.text_input("API Location", value=location)
+    # Add a button to create a new configuration
+    if st.button("➕ Add New Configuration"):
+        # Set a session state flag to show the new configuration form
+        st.session_state.show_new_config_form = True
     
-    if st.button("Save Configuration"):
-        new_config = {
-            'open_webui': {
-                'api_key': new_api_key,
-                'location': new_location
-            }
-        }
-        save_connect_owui(new_config, config_file)
-        st.success("Configuration saved successfully!")
+    # Show new configuration form if the button was clicked
+    if st.session_state.get('show_new_config_form', False):
+        st.subheader("Add New Configuration")
+        with st.form("new_config_form"):
+            new_config_name = st.text_input("Configuration Name")
+            new_api_key = st.text_input("API Key", type="password")
+            new_location = st.text_input("API Location")
+            submit_button = st.form_submit_button("Save New Configuration")
+            
+            if submit_button:
+                if not new_config_name:
+                    st.error("Configuration name is required")
+                elif new_config_name in config_names:
+                    st.error(f"A configuration named '{new_config_name}' already exists")
+                else:
+                    # Create new configuration
+                    new_config = {
+                        'name': new_config_name,
+                        'active': True,  # Mark as active
+                        'open_webui': {
+                            'api_key': new_api_key,
+                            'location': new_location
+                        }
+                    }
+                    
+                    # Set all other configs to inactive
+                    for config in all_configs:
+                        config['active'] = False
+                    
+                    all_configs.append(new_config)
+                    save_all_configs(all_configs, config_file)
+                    st.session_state.selected_config_name = new_config_name
+                    
+                    # Clear the form flag
+                    st.session_state.show_new_config_form = False
+                    
+                    st.success("Configuration added successfully!")
+                    st.rerun()
+    
+    # Display existing configurations if any
+    if config_names:
+        st.subheader("Existing Configurations")
         
-        # Test the connection with new settings
-        test_result = test_connection()
-        if test_result.get('status') == 'success':
-            st.success(test_result.get('message'))
+        # Use session state for selection
+        selected_config_name = st.selectbox(
+            "Choose Configuration", 
+            config_names, 
+            index=config_names.index(st.session_state.selected_config_name) if st.session_state.selected_config_name in config_names else 0
+        )
+        
+        # Update session state when selection changes
+        if selected_config_name != st.session_state.selected_config_name:
+            st.session_state.selected_config_name = selected_config_name
+            
+            # Mark this configuration as active in the file
+            for config in all_configs:
+                config['active'] = (config.get('name') == selected_config_name)
+            save_all_configs(all_configs, config_file)
+            
+            st.rerun()
+            
+        # Get the selected configuration
+        config = next((c for c in all_configs if c['name'] == selected_config_name), None)
+        
+        if config is None:
+            st.error("Selected configuration not found.")
         else:
-            st.error(test_result.get('message'))
+            # Initialize open_webui if it doesn't exist
+            if 'open_webui' not in config:
+                config['open_webui'] = {'api_key': '', 'location': ''}
+            
+            api_key = config.get('open_webui', {}).get('api_key', '')
+            location = config.get('open_webui', {}).get('location', '')
+            
+            # Edit form for the selected configuration
+            with st.form("edit_config_form"):
+                st.subheader(f"Edit Configuration: {selected_config_name}")
+                new_api_key = st.text_input("API Key", value=api_key, type="password")
+                new_location = st.text_input("API Location", value=location)
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    submit_button = st.form_submit_button("Save Changes")
+                with col2:
+                    test_button = st.form_submit_button("Test Connection")
+                with col3:
+                    delete_button = st.form_submit_button("Delete Configuration", type="secondary")
+                
+                if test_button:
+                    # Test the connection with updated settings
+                    test_result = test_connection()
+                    if test_result.get('status') == 'success':
+                        st.success(test_result.get('message'))
+                    else:
+                        st.error(test_result.get('message'))
+
+                if submit_button:
+                    # Update the current configuration
+                    if 'open_webui' not in config:
+                        config['open_webui'] = {}
+                    config['open_webui']['api_key'] = new_api_key
+                    config['open_webui']['location'] = new_location
+                    
+                    # Find the index of the config to update
+                    for i, cfg in enumerate(all_configs):
+                        if cfg.get('name') == selected_config_name:
+                            all_configs[i] = config
+                            # Ensure this config is marked as active
+                            all_configs[i]['active'] = True
+                        else:
+                            # Set all other configs to inactive
+                            all_configs[i]['active'] = False
+                    
+                    # Save changes back to the file
+                    save_all_configs(all_configs, config_file)
+                    st.success("Configuration saved successfully!")
+                    
+                    # Test the connection with updated settings
+                    test_result = test_connection()
+                    if test_result.get('status') == 'success':
+                        st.success(test_result.get('message'))
+                    else:
+                        st.error(test_result.get('message'))
+                
+                if delete_button:
+                    if len(all_configs) <= 1:
+                        st.error("Cannot delete the only configuration. Please add another configuration first.")
+                    else:
+                        # Remove the selected configuration
+                        all_configs = [cfg for cfg in all_configs if cfg.get('name') != selected_config_name]
+                        
+                        # Mark the first remaining config as active
+                        if all_configs:
+                            all_configs[0]['active'] = True
+                            st.session_state.selected_config_name = all_configs[0].get('name')
+                        else:
+                            st.session_state.selected_config_name = None
+                        
+                        # Save changes back to the file
+                        save_all_configs(all_configs, config_file)
+                        st.success(f"Configuration '{selected_config_name}' deleted successfully!")
+                        st.rerun()
+    else:
+        # No configurations exist yet, show the initial form
+        st.info("No configurations available. Please add one.")
+        with st.form("initial_config_form"):
+            new_config_name = st.text_input("New Configuration Name")
+            new_api_key = st.text_input("API Key", type="password")
+            new_location = st.text_input("API Location")
+            submit_button = st.form_submit_button("Add Configuration")
+            
+            if submit_button:
+                if not new_config_name:
+                    st.error("Configuration name is required")
+                else:
+                    new_config = {
+                        'name': new_config_name,
+                        'active': True,  # Mark as active
+                        'open_webui': {
+                            'api_key': new_api_key,
+                            'location': new_location
+                        }
+                    }
+                    all_configs.append(new_config)
+                    save_all_configs(all_configs, config_file)
+                    st.session_state.selected_config_name = new_config_name
+                    st.success("Configuration added successfully!")
+                    st.rerun()
+
 # ANALYSIS
 elif page == "View Analysis":
     st.title("View Analysis Results")
@@ -716,6 +946,7 @@ elif page == "View Analysis":
     # Define file collections for HTML, MD, and JSON
     html_files = []
     download_files = []
+    all_analysis_files = []
 
     # Collect files for display/download
     for file in os.listdir(analysis_dir):
@@ -728,6 +959,7 @@ elif page == "View Analysis":
                 'path': file_path,
                 'modified': os.path.getmtime(file_path),
             })
+            all_analysis_files.append(file_path)
         
         elif file.endswith(('.md', '.json')):
             # Add Markdown and JSON files for download
@@ -736,10 +968,12 @@ elif page == "View Analysis":
                 'path': file_path,
                 'modified': os.path.getmtime(file_path),
             })
+            all_analysis_files.append(file_path)
         
     # Sort files 
     html_files.sort(key=lambda x: x['name'], reverse=True)
     download_files.sort(key=lambda x: x['name'], reverse=True)
+    all_analysis_files.sort(key=str.lower)
     
     # Display HTML files with rendering
     if not html_files:
@@ -767,6 +1001,58 @@ elif page == "View Analysis":
             
             st.download_button(
                 label=f"Download {file_extension.upper()} - {file['name']}",
+                data=file_bytes,
+                file_name=file['name'],
+                mime=f"text/{file_extension}" if file_extension == 'md' else "application/json"
+            )
+elif page == "Manage Analysis Files":
+    st.title("Analysis Files Management")
+    # Create analysis directory if it doesn't exist
+    analysis_dir = './analysis'
+    os.makedirs(analysis_dir, exist_ok=True)
+    # Define file collections for HTML, MD, and JSON
+    download_files = []
+    all_analysis_files = []
+    # Collect files for display/download
+    for file in os.listdir(analysis_dir):
+        file_path = os.path.join(analysis_dir, file)
+        download_files.append({
+            'name': file,
+            'path': file_path,
+            'modified': os.path.getmtime(file_path),
+        })
+        all_analysis_files.append(file_path)
+    # Sort files
+    download_files.sort(key=lambda x: x['name'], reverse=True)
+    all_analysis_files.sort(key=str.lower)
+    st.subheader("Delete files")
+    # Get all file names for selection
+    all_file_names = [os.path.basename(path) for path in all_analysis_files]
+    if all_file_names:
+        files_to_delete = st.multiselect("Select files to delete", all_file_names)
+        if files_to_delete and st.button("Delete Selected Files", type="primary"):
+            deleted_count = 0
+            for file_name in files_to_delete:
+                file_path = os.path.join(analysis_dir, file_name)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    deleted_count += 1
+            st.success(f"Successfully deleted {deleted_count} file(s). Refresh the page to see changes.")
+    st.divider()
+    st.subheader("Download files")
+    
+    # Adjust number of columns accordingly to your layout
+    num_columns = 4
+    columns = st.columns(num_columns)
+    
+    for idx, file in enumerate(download_files):
+        file_extension = file['name'].split('.')[-1]
+        with open(file['path'], 'rb') as f:
+            file_bytes = f.read()
+        col = columns[idx % num_columns]  # Rotate through columns based on index
+        with col:
+            st.download_button(
+                label=f"{file_extension.upper()} - {file['name']}",
                 data=file_bytes,
                 file_name=file['name'],
                 mime=f"text/{file_extension}" if file_extension == 'md' else "application/json"

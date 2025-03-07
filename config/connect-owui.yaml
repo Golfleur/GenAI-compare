@@ -1,3 +1,11 @@
-open_webui:
-  api_key: <Open-WebUI API Key>
-  location: http://localhost:3001
+configs:
+- active: false
+  name: A
+  open_webui:
+    api_key: <key A>
+    location: http://127.0.0.1:3001/
+- active: true
+  name: B
+  open_webui:
+    api_key: <key B>sk-b37b40c54f6c489abea3c8e9f791b0bd
+    location: https://127.0.0.1:3000
