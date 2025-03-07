@@ -7,5 +7,5 @@ configs:
 - active: true
   name: B
   open_webui:
-    api_key: <key B>sk-b37b40c54f6c489abea3c8e9f791b0bd
-    location: https://127.0.0.1:3000
+    api_key: <key B>
+    location: http://127.0.0.1:3001
