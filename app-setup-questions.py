@@ -9,7 +9,6 @@ from pathlib import Path
 import pandas as pd
 import streamlit.components.v1 as components
 
-# This must be the first Streamlit command
 st.set_page_config(
     page_title="GenAI Performance Comparator",
     page_icon="🤖",
@@ -17,21 +16,17 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Configuration paths and settings
 CONFIG_PATH_ = './config/config.yaml'
 config_file = './config/connect-owui.yaml'
 
-# Ensure directories exist for storing files
 os.makedirs('./questions', exist_ok=True)
 os.makedirs('./targets', exist_ok=True)
 os.makedirs('./answers', exist_ok=True)
 os.makedirs('./config', exist_ok=True)
 if not os.path.exists(config_file):
-    # Create an empty config file if it doesn't exist
     with open(config_file, 'w', encoding='utf-8') as f:
         yaml.dump({'configs': []}, f)
 
-# Initialize session state variables
 if 'show_new_config_form' not in st.session_state:
     st.session_state.show_new_config_form = False
 
@@ -41,7 +36,6 @@ def load_all_configs(file_path):
             config_data = yaml.safe_load(file)
             if isinstance(config_data, dict) and 'configs' in config_data:
                 configs = config_data.get('configs', [])
-                # Ensure all configs are dictionaries
                 return [c for c in configs if isinstance(c, dict)]
             else:
                 print(f"Config data doesn't have expected structure: {config_data}")
@@ -50,7 +44,6 @@ def load_all_configs(file_path):
         print(f"Error loading configs: {e}")
         return []
 
-# Load configurations
 all_configs = load_all_configs(config_file)
 config_names = []
 if all_configs:
@@ -62,7 +55,6 @@ if all_configs:
 current_config_index = 0
 config = all_configs[current_config_index] if all_configs and all_configs else {}
 
-# Set API variables based on config
 API_KEY = config.get('open_webui', {}).get('api_key', '')
 BASE_URL = config.get('open_webui', {}).get('location', '')
 API_URL = f"{BASE_URL}/api/models" if BASE_URL else ""
@@ -75,13 +67,10 @@ def save_all_configs(configs, file_path):
 def initialize_session_state():
     """Initialize session state variables if they don't exist"""
     if 'selected_config_name' not in st.session_state:
-        # Load all configs
         all_configs = load_all_configs(config_file)
         config_names = [c.get('name', f'Unnamed Config {i}') for i, c in enumerate(all_configs)] if all_configs else []
-        # Set default to first config if available
         st.session_state.selected_config_name = config_names[0] if config_names else None
         
-# Call this function at the start
 initialize_session_state()
 
 def get_current_config():
@@ -89,18 +78,13 @@ def get_current_config():
     all_configs = load_all_configs(config_file)
     if not all_configs:
         return {}
-        
-    # Find the config with the selected name
     selected_name = st.session_state.selected_config_name
     for config in all_configs:
         if config.get('name') == selected_name:
             return config
-            
-    # Fallback to first config if selected name not found
     return all_configs[0] if all_configs else {}
     
 def get_api_credentials():
-    """Get API credentials from the current configuration"""
     config = get_current_config()
     api_key = config.get('open_webui', {}).get('api_key', '')
     base_url = config.get('open_webui', {}).get('location', '')
@@ -112,11 +96,6 @@ def save_question(nom_question, question_content):
     with open(question_path, 'w', encoding="utf-8") as file:
         file.write(question_content)
 
-def save_target(nom_question, target_data):
-    target_path = f'./targets/{nom_question}.t'
-    with open(target_path, 'w', encoding="utf-8") as file:
-        json.dump(target_data, file, indent=4)
-
 def load_question(nom_question):
     question_path = f'./questions/{nom_question}.q'
     if os.path.exists(question_path):
@@ -124,12 +103,55 @@ def load_question(nom_question):
             return file.read()
     return None
 
+def save_target(nom_question, target_data):
+    target_path = f'./targets/{nom_question}.t'
+    with open(target_path, 'w', encoding="utf-8") as file:
+        json.dump(target_data, file, indent=4)
+
 def load_target(nom_question):
     target_path = f'./targets/{nom_question}.t'
     if os.path.exists(target_path):
         with open(target_path, 'r', encoding="utf-8") as file:
             return json.load(file)
     return None
+
+def save_question_metadata(nom_question, metadata):
+    """Save metadata for a question in a separate file"""
+    metadata_dir = './questions_metadata'
+    os.makedirs(metadata_dir, exist_ok=True)
+    metadata_path = f'{metadata_dir}/{nom_question}.meta'
+    with open(metadata_path, 'w', encoding="utf-8") as file:
+        json.dump(metadata, file, indent=4)
+
+def load_question_metadata(nom_question):
+    """Load metadata for a question"""
+    metadata_dir = './questions_metadata'
+    os.makedirs(metadata_dir, exist_ok=True) 
+    metadata_path = f'{metadata_dir}/{nom_question}.meta'
+    if os.path.exists(metadata_path):
+        try:
+            with open(metadata_path, 'r', encoding="utf-8") as file:
+                return json.load(file)
+        except json.JSONDecodeError: # Return default if file is corrupted
+            return {"category": "Uncategorized"}
+    return {"category": "Uncategorized"} 
+
+def get_all_categories():
+    metadata_dir = './questions_metadata'
+    os.makedirs(metadata_dir, exist_ok=True)
+    categories = set(["Uncategorized"])  # Default 
+    if os.path.exists(metadata_dir):
+        for filename in os.listdir(metadata_dir):
+            if filename.endswith('.meta'):
+                filepath = os.path.join(metadata_dir, filename)
+                try:
+                    with open(filepath, 'r', encoding="utf-8") as file:
+                        metadata = json.load(file)
+                        if metadata and isinstance(metadata, dict) and 'category' in metadata and metadata['category']:
+                            categories.add(metadata['category'])
+                except (json.JSONDecodeError, FileNotFoundError):
+                    pass
+    return sorted(list(categories))
 
 def save_selected_questions(selected_questions):
     config_path = './config/selected_questions.yaml'
@@ -158,14 +180,11 @@ def save_manual_answer(question_name, answer_content, source):
 # --- Model Management Functions ---
 def test_connection(local=False):
     try:
-        # Get credentials from the current configuration
         API_KEY, BASE_URL = get_api_credentials()
-        
         if not API_KEY or not BASE_URL:
             if not local:
                 return {'status': 'error', 'message': 'API key and location are required.'}
             return False
-            
         response = requests.get(f"{BASE_URL}/api/models", headers={'Authorization': f'Bearer {API_KEY}'})
         if response.status_code == 200:
             if not local:
@@ -181,7 +200,6 @@ def test_connection(local=False):
         return False
 
 def fetch_models():
-    # Get credentials from the current configuration
     API_KEY, BASE_URL = get_api_credentials()
     API_URL = f"{BASE_URL}/api/models"
     
@@ -301,7 +319,6 @@ def load_selected_models():
     return []
 
 def save_to_yaml(selected_models):
-    # Load the existing configuration
     current_config = {}
     if os.path.exists(CONFIG_PATH_):
         with open(CONFIG_PATH_, 'r', encoding="utf-8") as file:
@@ -309,9 +326,7 @@ def save_to_yaml(selected_models):
                 current_config = yaml.safe_load(file) or {}
             except yaml.YAMLError:
                 print("Error reading YAML configuration")
-    # Update the selected models
     current_config['selected_models'] = selected_models
-    # Write the updated configuration back to the YAML file
     with open(CONFIG_PATH_, 'w', encoding="utf-8") as file:
         yaml.dump(current_config, file)
 
@@ -325,14 +340,13 @@ else:
 page = st.sidebar.radio(
     "Choose a page",
     ["Perform comparison", "Add Question", "View Questions", "Edit Questions", "Delete Questions",
-     "Select Questions", "Manual Entry", "Models", "Select Comparator", "Configuration", "View Analysis","Manage Analysis Files"]
+     "Select Questions", "Manage Question Categories", "Manual Entry", "Models", "Select Comparator", "Configuration", "View Analysis","Manage Analysis Files"]
 )
 # --- HOME PAGE ---
 if page == "Perform comparison":
     st.title("Performance Analyser for Generative AI models ")
     st.write("Use the sidebar to navigate.\n\nFirst, make sure to enter your Configuration\n\nYou must also setup at least one question\n\nThen, select which Models are to be compared and select a Comparator model that will perform the analysis of the answers")
     
-    # Display current configuration
     current_config = st.session_state.selected_config_name
     st.info(f"Using configuration: {current_config}" if current_config else "No configuration selected")
     
@@ -343,7 +357,6 @@ if page == "Perform comparison":
             st.info("Running comparison script...")
             output_placeholder = st.empty()
             
-            # Simple command without config argument
             command = ["python", "-u", "app-compare.py", "--verbose"]
             
             process = subprocess.Popen(
@@ -354,7 +367,6 @@ if page == "Perform comparison":
                 bufsize=1
             )
             
-            # Display output in real-time
             output_text = ""
             while True:
                 output_line = process.stdout.readline()
@@ -375,7 +387,6 @@ if page == "Perform comparison":
             st.info("Running comparison script...")
             output_placeholder = st.empty()
             
-            # Simple command without config argument
             command = ["python", "-u", "app-anal.py", "--verbose"]
             
             process = subprocess.Popen(
@@ -386,7 +397,6 @@ if page == "Perform comparison":
                 bufsize=1
             )
             
-            # Display output in real-time
             output_text = ""
             while True:
                 output_line = process.stdout.readline()
@@ -401,11 +411,27 @@ if page == "Perform comparison":
                 st.success("Script executed successfully!")
             else:
                 st.error(f"Script execution failed with return code {return_code}")                       
+
 # --- ADD QUESTION PAGE ---
 elif page == "Add Question":
     st.title("Add New Question")
     
     nom_question = st.text_input("Question Name (no spaces)")
+    existing_categories = get_all_categories()
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        category_type = st.radio("Category Selection", ["Choose Existing", "Add New"], horizontal=True)
+        if category_type == "Choose Existing":
+            category = st.selectbox("Select Category", existing_categories)
+        else:
+            category = st.text_input("New Category Name")
+    
+    with col2:
+        st.write("Existing Categories:")
+        for cat in existing_categories:
+            st.write(f"- {cat}")
+    
     question_content = st.text_area("Question Content", height=200)
     reponse_cible = st.text_area("Target Answer", height=150)
     infos_cruciales = st.text_area("Crucial Information", height=100)
@@ -416,6 +442,8 @@ elif page == "Add Question":
             st.error("Question name is required")
         elif ' ' in nom_question:
             st.error("Question name must not contain spaces")
+        elif category_type == "Add New" and not category:
+            st.error("New category name is required")
         else:
             save_question(nom_question, question_content)
             target_data = {
@@ -424,6 +452,7 @@ elif page == "Add Question":
                 "infos_a_eviter": infos_a_eviter
             }
             save_target(nom_question,  target_data)
+            save_question_metadata(nom_question, {"category": category})
             st.success(f"Question '{nom_question}' saved successfully!")
             # Clear the form
             st.rerun()
@@ -440,13 +469,15 @@ elif page == "View Questions":
             nom_question = filename.split('.')[0]
             question_content = load_question(nom_question)
             target_data = load_target(nom_question)
+            metadata = load_question_metadata(nom_question)
             first_paragraph = question_content.split('\n')[0] if question_content else ''
             
             questions.append({
                 'nom_question': nom_question,
                 'question_content': question_content,
                 'target_data': target_data,
-                'first_paragraph': first_paragraph
+                'first_paragraph': first_paragraph,
+                'category': metadata.get("category", "Uncategorized")
             })
     
     questions.sort(key=lambda x: x['nom_question'].lower())
@@ -454,7 +485,14 @@ elif page == "View Questions":
     if not questions:
         st.info("No questions found. Add some questions first.")
     else:
-        for q in questions:
+        all_categories = sorted(list(set([q['category'] for q in questions])))
+        selected_category = st.selectbox("Filter by category", ["All"] + all_categories)
+       
+        filtered_questions = questions
+        if selected_category != "All":
+            filtered_questions = [q for q in questions if q['category'] == selected_category]
+        
+        for q in filtered_questions:
             with st.expander(f"{q['nom_question']} - {q['first_paragraph'][:100]}..."):
                 st.subheader("Question Content")
                 st.write(q['question_content'])
@@ -472,18 +510,35 @@ elif page == "View Questions":
 # --- EDIT QUESTIONS PAGE ---
 elif page == "Edit Questions":
     st.title("Edit Questions")
-    
     question_files = [f[:-2] for f in os.listdir('./questions') if f.endswith('.q')]
     question_files.sort(key=str.lower)
-    
     if not question_files:
         st.info("No questions found. Add some questions first.")
     else:
         selected_question = st.selectbox("Select a question to edit", question_files)
-        
         if selected_question:
             question_content = load_question(selected_question)
             target_data = load_target(selected_question) or {}
+            metadata = load_question_metadata(selected_question)
+            current_category = metadata.get('category', 'Uncategorized')
+            existing_categories = get_all_categories()
+            
+            if current_category not in existing_categories:
+                existing_categories.append(current_category)
+                existing_categories.sort()
+            
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                category_type = st.radio("Category Selection", ["Choose Existing", "Add New"], horizontal=True)
+                if category_type == "Choose Existing":
+                    new_category = st.selectbox("Select Category", existing_categories, 
+                                              index=existing_categories.index(current_category))
+                else:
+                    new_category = st.text_input("New Category Name")
+            with col2:
+                st.write("Existing Categories:")
+                for cat in existing_categories:
+                    st.write(f"- {cat}")
             
             new_question_content = st.text_area("Question Content", value=question_content, height=200)
             new_reponse_cible = st.text_area("Target Answer", value=target_data.get('reponse_cible', ''), height=150)
@@ -498,6 +553,7 @@ elif page == "Edit Questions":
                     "infos_a_eviter": new_infos_a_eviter
                 }
                 save_target(selected_question, new_target_data)
+                save_question_metadata(selected_question, {"category": new_category})   
                 st.success(f"Question '{selected_question}' updated successfully!")
 
 # --- DELETE QUESTIONS PAGE ---
@@ -532,24 +588,135 @@ elif page == "Delete Questions":
 # --- SELECT QUESTIONS PAGE ---
 elif page == "Select Questions":
     st.title("Select Questions for Analysis")
-    
+    all_categories = get_all_categories()
+
     question_files = [f[:-2] for f in os.listdir('./questions') if f.endswith('.q')]
     question_files.sort(key=str.lower)
+    question_categories = {}
+    for qname in question_files:
+        metadata = load_question_metadata(qname)
+        question_categories[qname] = metadata.get("category", "Uncategorized")
     
     if not question_files:
         st.info("No questions found. Add some questions first.")
     else:
+        selected_category = st.selectbox("Filter by category", ["All"] + all_categories)
+        filtered_questions = question_files
+        if selected_category != "All":
+            filtered_questions = [q for q in question_files if question_categories.get(q) == selected_category]
+        
         selected_questions = load_selected_questions()
         valid_selected_questions = [q for q in selected_questions if q in question_files]
         new_selected_questions = st.multiselect(
             "Select questions for analysis",
-            question_files,
-            default=valid_selected_questions
+            filtered_questions,
+            default=valid_selected_questions,
+            format_func=lambda q: f"{q} [{question_categories.get(q)}]"
         )
         
         if st.button("Save Selection"):
             save_selected_questions(new_selected_questions)
             st.success(f"Selected {len(new_selected_questions)} question(s) for analysis!")
+
+# --- MANAGE QUESTION CATEGORIES PAGE
+elif page == "Manage Question Categories":
+    st.title("Manage Question Categories")
+    all_categories = get_all_categories()
+    
+    st.subheader("Current Categories")
+    for cat in all_categories:
+        st.write(f"- {cat}")
+    
+    st.divider()
+    
+    st.subheader("Rename Category")
+    old_category = st.selectbox("Select category to rename", all_categories)
+    new_category_name = st.text_input("New category name")
+    if st.button("Rename Category"):
+        if not new_category_name:
+            st.error("New category name is required")
+        elif new_category_name in all_categories:
+            st.error(f"Category '{new_category_name}' already exists")
+        else:
+            metadata_dir = './questions_metadata'
+            renamed_count = 0
+            for filename in os.listdir(metadata_dir):
+                if filename.endswith('.meta'):
+                    filepath = os.path.join(metadata_dir, filename)
+                    try:
+                        with open(filepath, 'r', encoding="utf-8") as file:
+                            metadata = json.load(file)
+                        if metadata.get("category") == old_category:
+                            metadata["category"] = new_category_name
+                            with open(filepath, 'w', encoding="utf-8") as file:
+                                json.dump(metadata, file, indent=4)
+                            renamed_count += 1
+                    except (json.JSONDecodeError, FileNotFoundError):
+                        pass
+            st.success(f"Renamed category '{old_category}' to '{new_category_name}' for {renamed_count} questions")
+            st.rerun()  # Refresh to show updated categories
+    
+    st.divider()
+    
+    st.subheader("Merge Categories")
+    categories_to_merge = st.multiselect("Select categories to merge", all_categories)
+    target_category = st.selectbox("Target category (all selected will be merged into this)", 
+                                  all_categories if all_categories else [""],
+                                  disabled=not categories_to_merge)
+    
+    if st.button("Merge Categories"):
+        if not categories_to_merge:
+            st.error("Please select at least one category to merge")
+        elif target_category not in categories_to_merge:
+            st.error("Target category must be one of the selected categories")
+        else:
+            metadata_dir = './questions_metadata'
+            merged_count = 0
+            for filename in os.listdir(metadata_dir):
+                if filename.endswith('.meta'):
+                    filepath = os.path.join(metadata_dir, filename)
+                    try:
+                        with open(filepath, 'r', encoding="utf-8") as file:
+                            metadata = json.load(file)
+                        if metadata.get("category") in categories_to_merge and metadata.get("category") != target_category:
+                            metadata["category"] = target_category
+                            with open(filepath, 'w', encoding="utf-8") as file:
+                                json.dump(metadata, file, indent=4)
+                            merged_count += 1
+                    except (json.JSONDecodeError, FileNotFoundError):
+                        pass
+            st.success(f"Merged {len(categories_to_merge)-1} categories into '{target_category}', affecting {merged_count} questions")
+            st.rerun()
+
+    st.divider()
+    
+    st.subheader("Delete Category")
+    category_to_delete = st.selectbox("Select category to delete", all_categories)
+    replacement_category = st.selectbox("Move questions to category", 
+                                       [c for c in all_categories if c != category_to_delete],
+                                       disabled=len(all_categories) <= 1)
+    
+    if st.button("Delete Category"):
+        if len(all_categories) <= 1:
+            st.error("Cannot delete the only category")
+        else:
+            metadata_dir = './questions_metadata'
+            moved_count = 0
+            for filename in os.listdir(metadata_dir):
+                if filename.endswith('.meta'):
+                    filepath = os.path.join(metadata_dir, filename)
+                    try:
+                        with open(filepath, 'r', encoding="utf-8") as file:
+                            metadata = json.load(file)
+                        if metadata.get("category") == category_to_delete:
+                            metadata["category"] = replacement_category
+                            with open(filepath, 'w', encoding="utf-8") as file:
+                                json.dump(metadata, file, indent=4)
+                            moved_count += 1
+                    except (json.JSONDecodeError, FileNotFoundError):
+                        pass
+            st.success(f"Deleted category '{category_to_delete}' and moved {moved_count} questions to '{replacement_category}'")
+            st.rerun()
 
 # --- MANUAL ENTRY PAGE ---
 elif page == "Manual Entry":
@@ -1005,6 +1172,7 @@ elif page == "View Analysis":
                 file_name=file['name'],
                 mime=f"text/{file_extension}" if file_extension == 'md' else "application/json"
             )
+
 elif page == "Manage Analysis Files":
     st.title("Analysis Files Management")
     # Create analysis directory if it doesn't exist
