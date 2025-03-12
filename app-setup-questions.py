@@ -366,7 +366,6 @@ if page == "Perform comparison":
                 universal_newlines=True,
                 bufsize=1
             )
-            
             output_text = ""
             while True:
                 output_line = process.stdout.readline()
@@ -374,8 +373,7 @@ if page == "Perform comparison":
                     break
                 if output_line:
                     output_text += output_line
-                    output_placeholder.text_area("Output:", output_text, height=400)
-            
+                    output_placeholder.text_area("Output:", output_text, height=800, key=f"output_{hash(output_text)}")           
             return_code = process.poll()
             if return_code == 0:
                 st.success("Script executed successfully!")
@@ -384,10 +382,10 @@ if page == "Perform comparison":
     with col2:
         st.subheader("Run Analysis")
         if st.button("Run Analysis Script", key="run_analysis"):
-            st.info("Running comparison script...")
+            st.info("Running analysis script...")
             output_placeholder = st.empty()
             
-            command = ["python", "-u", "app-anal.py", "--verbose"]
+            command = ["python", "-u", "app-compare.py", "--verbose"]
             
             process = subprocess.Popen(
                 command,
@@ -396,7 +394,6 @@ if page == "Perform comparison":
                 universal_newlines=True,
                 bufsize=1
             )
-            
             output_text = ""
             while True:
                 output_line = process.stdout.readline()
@@ -404,8 +401,7 @@ if page == "Perform comparison":
                     break
                 if output_line:
                     output_text += output_line
-                    output_placeholder.text_area("Output:", output_text, height=400)
-            
+                    output_placeholder.text_area("Output:", output_text, height=800, key=f"output_{hash(output_text)}")           
             return_code = process.poll()
             if return_code == 0:
                 st.success("Script executed successfully!")
@@ -622,16 +618,45 @@ elif page == "Select Questions":
 elif page == "Manage Question Categories":
     st.title("Manage Question Categories")
     all_categories = get_all_categories()
-    
     st.subheader("Current Categories")
     for cat in all_categories:
         st.write(f"- {cat}")
+    st.divider()
     
+    st.subheader("Add New Category")
+    new_category = st.text_input("New category name")
+    if st.button("Add Category"):
+        if not new_category:
+            st.error("Category name is required")
+        elif new_category in all_categories:
+            st.error(f"Category '{new_category}' already exists")
+        else:
+            # We need to create at least one question with this category
+            metadata_dir = './questions_metadata'
+            os.makedirs(metadata_dir, exist_ok=True)
+            
+            # Create a placeholder metadata file with the new category
+            placeholder_id = f"category_placeholder_{new_category.lower().replace(' ', '_')}"
+            placeholder_path = os.path.join(metadata_dir, f"{placeholder_id}.meta")
+            
+            placeholder_metadata = {
+                "id": placeholder_id,
+                "category": new_category,
+                "difficulty": "medium",
+                "created": datetime.now().isoformat(),
+                "is_placeholder": True  # Flag to identify this as a category placeholder
+            }
+            
+            with open(placeholder_path, 'w', encoding="utf-8") as file:
+                json.dump(placeholder_metadata, file, indent=4)
+                
+            st.success(f"Added new category: '{new_category}'")
+            st.rerun()  # Refresh to show updated categories
     st.divider()
     
     st.subheader("Rename Category")
     old_category = st.selectbox("Select category to rename", all_categories)
-    new_category_name = st.text_input("New category name")
+    new_category_name = st.text_input("New category name", key="rename_category")
     if st.button("Rename Category"):
         if not new_category_name:
             st.error("New category name is required")
@@ -655,15 +680,12 @@ elif page == "Manage Question Categories":
                         pass
             st.success(f"Renamed category '{old_category}' to '{new_category_name}' for {renamed_count} questions")
             st.rerun()  # Refresh to show updated categories
-    
     st.divider()
-    
     st.subheader("Merge Categories")
     categories_to_merge = st.multiselect("Select categories to merge", all_categories)
-    target_category = st.selectbox("Target category (all selected will be merged into this)", 
+    target_category = st.selectbox("Target category (all selected will be merged into this)",
                                   all_categories if all_categories else [""],
                                   disabled=not categories_to_merge)
-    
     if st.button("Merge Categories"):
         if not categories_to_merge:
             st.error("Please select at least one category to merge")
@@ -687,15 +709,12 @@ elif page == "Manage Question Categories":
                         pass
             st.success(f"Merged {len(categories_to_merge)-1} categories into '{target_category}', affecting {merged_count} questions")
             st.rerun()
-
     st.divider()
-    
     st.subheader("Delete Category")
     category_to_delete = st.selectbox("Select category to delete", all_categories)
-    replacement_category = st.selectbox("Move questions to category", 
+    replacement_category = st.selectbox("Move questions to category",
                                        [c for c in all_categories if c != category_to_delete],
                                        disabled=len(all_categories) <= 1)
-    
     if st.button("Delete Category"):
         if len(all_categories) <= 1:
             st.error("Cannot delete the only category")

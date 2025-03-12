@@ -118,7 +118,7 @@ def generate_answer(question, model_name, verbose, api_key, base_url):
         print(f"Making request to: {url}")
         print(f"Using model: {model_name}")
         # print(f"Headers: {headers}")
-        print(f"Payload: {json.dumps(payload, indent=2)}")
+        # print(f"Payload: {json.dumps(payload, indent=2)}")
         
     try:
         response = requests.post(url, headers=headers, json=payload)
@@ -130,9 +130,9 @@ def generate_answer(question, model_name, verbose, api_key, base_url):
         response.raise_for_status()
         response_data = response.json()
         
-        if verbose:
-            print("*-*-*-*-*-*-*-*-*")
-            print(f"Response data: {json.dumps(response_data, indent=2)}\n")
+        # if verbose:
+            # print("*-*-*-*-*-*-*-*-*")
+            # print(f"Response data: {json.dumps(response_data, indent=2)}\n")
             
         return response_data
     except requests.exceptions.HTTPError as e:
