@@ -346,19 +346,17 @@ page = st.sidebar.radio(
 if page == "Perform comparison":
     st.title("Performance Analyser for Generative AI models ")
     st.write("Use the sidebar to navigate.\n\nFirst, make sure to enter your Configuration\n\nYou must also setup at least one question\n\nThen, select which Models are to be compared and select a Comparator model that will perform the analysis of the answers")
-    
     current_config = st.session_state.selected_config_name
     st.info(f"Using configuration: {current_config}" if current_config else "No configuration selected")
-    
+
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Run Comparison")
         if st.button("Run Compare Script", key="run_compare"):
             st.info("Running comparison script...")
             output_placeholder = st.empty()
-            
+
             command = ["python", "-u", "app-compare.py", "--verbose"]
-            
             process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
@@ -384,9 +382,8 @@ if page == "Perform comparison":
         if st.button("Run Analysis Script", key="run_analysis"):
             st.info("Running analysis script...")
             output_placeholder = st.empty()
-            
-            command = ["python", "-u", "app-compare.py", "--verbose"]
-            
+
+            command = ["python", "-u", "app-anal.py", "--verbose"]
             process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
@@ -406,15 +403,15 @@ if page == "Perform comparison":
             if return_code == 0:
                 st.success("Script executed successfully!")
             else:
-                st.error(f"Script execution failed with return code {return_code}")                       
+                st.error(f"Script execution failed with return code {return_code}")
 
 # --- ADD QUESTION PAGE ---
 elif page == "Add Question":
     st.title("Add New Question")
-    
+
     nom_question = st.text_input("Question Name (no spaces)")
     existing_categories = get_all_categories()
-    
+
     col1, col2 = st.columns([3, 1])
     with col1:
         category_type = st.radio("Category Selection", ["Choose Existing", "Add New"], horizontal=True)
@@ -422,17 +419,17 @@ elif page == "Add Question":
             category = st.selectbox("Select Category", existing_categories)
         else:
             category = st.text_input("New Category Name")
-    
+
     with col2:
         st.write("Existing Categories:")
         for cat in existing_categories:
             st.write(f"- {cat}")
-    
+
     question_content = st.text_area("Question Content", height=200)
     reponse_cible = st.text_area("Target Answer", height=150)
     infos_cruciales = st.text_area("Crucial Information", height=100)
     infos_a_eviter = st.text_area("Information to Avoid", height=100)
-    
+
     if st.button("Save Question"):
         if not nom_question:
             st.error("Question name is required")
@@ -456,10 +453,10 @@ elif page == "Add Question":
 # --- VIEW QUESTIONS PAGE ---
 elif page == "View Questions":
     st.title("View Questions")
-    
+
     question_files = os.listdir('./questions')
     questions = []
-    
+
     for filename in question_files:
         if filename.endswith('.q'):
             nom_question = filename.split('.')[0]
@@ -467,7 +464,7 @@ elif page == "View Questions":
             target_data = load_target(nom_question)
             metadata = load_question_metadata(nom_question)
             first_paragraph = question_content.split('\n')[0] if question_content else ''
-            
+
             questions.append({
                 'nom_question': nom_question,
                 'question_content': question_content,
@@ -475,31 +472,31 @@ elif page == "View Questions":
                 'first_paragraph': first_paragraph,
                 'category': metadata.get("category", "Uncategorized")
             })
-    
+
     questions.sort(key=lambda x: x['nom_question'].lower())
-    
+
     if not questions:
         st.info("No questions found. Add some questions first.")
     else:
         all_categories = sorted(list(set([q['category'] for q in questions])))
         selected_category = st.selectbox("Filter by category", ["All"] + all_categories)
-       
+
         filtered_questions = questions
         if selected_category != "All":
             filtered_questions = [q for q in questions if q['category'] == selected_category]
-        
+
         for q in filtered_questions:
             with st.expander(f"{q['nom_question']} - {q['first_paragraph'][:100]}..."):
                 st.subheader("Question Content")
                 st.write(q['question_content'])
-                
+
                 if q['target_data']:
                     st.subheader("Target Answer")
                     st.write(q['target_data'].get('reponse_cible', 'No target answer provided'))
-                    
+
                     st.subheader("Crucial Information")
                     st.write(q['target_data'].get('infos_cruciales', 'No crucial information provided'))
-                    
+
                     st.subheader("Information to Avoid")
                     st.write(q['target_data'].get('infos_a_eviter', 'No information to avoid provided'))
 
@@ -518,11 +515,11 @@ elif page == "Edit Questions":
             metadata = load_question_metadata(selected_question)
             current_category = metadata.get('category', 'Uncategorized')
             existing_categories = get_all_categories()
-            
+
             if current_category not in existing_categories:
                 existing_categories.append(current_category)
                 existing_categories.sort()
-            
+
             col1, col2 = st.columns([3, 1])
             with col1:
                 category_type = st.radio("Category Selection", ["Choose Existing", "Add New"], horizontal=True)
@@ -535,12 +532,12 @@ elif page == "Edit Questions":
                 st.write("Existing Categories:")
                 for cat in existing_categories:
                     st.write(f"- {cat}")
-            
+
             new_question_content = st.text_area("Question Content", value=question_content, height=200)
             new_reponse_cible = st.text_area("Target Answer", value=target_data.get('reponse_cible', ''), height=150)
             new_infos_cruciales = st.text_area("Crucial Information", value=target_data.get('infos_cruciales', ''), height=100)
             new_infos_a_eviter = st.text_area("Information to Avoid", value=target_data.get('infos_a_eviter', ''), height=100)
-            
+
             if st.button("Save Changes"):
                 save_question(selected_question, new_question_content)
                 new_target_data = {
@@ -555,29 +552,25 @@ elif page == "Edit Questions":
 # --- DELETE QUESTIONS PAGE ---
 elif page == "Delete Questions":
     st.title("Delete Questions")
-    
+
     question_files = [f[:-2] for f in os.listdir('./questions') if f.endswith('.q')]
     question_files.sort(key=str.lower)
-    
     if not question_files:
         st.info("No questions found. Add some questions first.")
     else:
         selected_questions = st.multiselect("Select questions to delete", question_files)
-        
         if selected_questions:
             if st.button("Delete Selected Questions", type="primary", help="This action cannot be undone!"):
                 for nom_question in selected_questions:
                     question_path = f'./questions/{nom_question}.q'
                     answer_path = f'./answers/{nom_question}.a'
                     target_path = f'./targets/{nom_question}.t'
-                    
                     if os.path.exists(question_path):
                         os.remove(question_path)
                     if os.path.exists(answer_path):
                         os.remove(answer_path)
                     if os.path.exists(target_path):
                         os.remove(target_path)
-                
                 st.success(f"Deleted {len(selected_questions)} question(s) successfully!")
                 st.rerun()
 
@@ -592,7 +585,7 @@ elif page == "Select Questions":
     for qname in question_files:
         metadata = load_question_metadata(qname)
         question_categories[qname] = metadata.get("category", "Uncategorized")
-    
+
     if not question_files:
         st.info("No questions found. Add some questions first.")
     else:
@@ -600,7 +593,6 @@ elif page == "Select Questions":
         filtered_questions = question_files
         if selected_category != "All":
             filtered_questions = [q for q in question_files if question_categories.get(q) == selected_category]
-        
         selected_questions = load_selected_questions()
         valid_selected_questions = [q for q in selected_questions if q in question_files]
         new_selected_questions = st.multiselect(
@@ -609,7 +601,6 @@ elif page == "Select Questions":
             default=valid_selected_questions,
             format_func=lambda q: f"{q} [{question_categories.get(q)}]"
         )
-        
         if st.button("Save Selection"):
             save_selected_questions(new_selected_questions)
             st.success(f"Selected {len(new_selected_questions)} question(s) for analysis!")
@@ -622,7 +613,6 @@ elif page == "Manage Question Categories":
     for cat in all_categories:
         st.write(f"- {cat}")
     st.divider()
-    
     st.subheader("Add New Category")
     new_category = st.text_input("New category name")
     if st.button("Add Category"):
@@ -631,14 +621,10 @@ elif page == "Manage Question Categories":
         elif new_category in all_categories:
             st.error(f"Category '{new_category}' already exists")
         else:
-            # We need to create at least one question with this category
             metadata_dir = './questions_metadata'
             os.makedirs(metadata_dir, exist_ok=True)
-            
-            # Create a placeholder metadata file with the new category
             placeholder_id = f"category_placeholder_{new_category.lower().replace(' ', '_')}"
             placeholder_path = os.path.join(metadata_dir, f"{placeholder_id}.meta")
-            
             placeholder_metadata = {
                 "id": placeholder_id,
                 "category": new_category,
@@ -646,14 +632,12 @@ elif page == "Manage Question Categories":
                 "created": datetime.now().isoformat(),
                 "is_placeholder": True  # Flag to identify this as a category placeholder
             }
-            
             with open(placeholder_path, 'w', encoding="utf-8") as file:
                 json.dump(placeholder_metadata, file, indent=4)
-                
             st.success(f"Added new category: '{new_category}'")
             st.rerun()  # Refresh to show updated categories
     st.divider()
-    
+
     st.subheader("Rename Category")
     old_category = st.selectbox("Select category to rename", all_categories)
     new_category_name = st.text_input("New category name", key="rename_category")
@@ -740,23 +724,21 @@ elif page == "Manage Question Categories":
 # --- MANUAL ENTRY PAGE ---
 elif page == "Manual Entry":
     st.title("Manual Answer Entry")
-    
     questions = [f[:-2] for f in os.listdir('./questions') if f.endswith('.q')]
     questions.sort(key=str.lower)
-    
+
     if not questions:
         st.info("No questions found. Add some questions first.")
     else:
         question_name = st.selectbox("Select Question", questions)
         source = st.text_input("Source/Model Name", help="Enter the name of the model or source providing this answer")
-        
+
         if question_name:
             question_content = load_question(question_name)
             st.subheader("Question Content")
             st.write(question_content)
-        
+
         answer_content = st.text_area("Answer Content", height=300)
-        
         if st.button("Save Answer"):
             if not source:
                 st.error("Source name is required")
@@ -770,8 +752,6 @@ elif page == "Manual Entry":
 # --- MODELS PAGE ---
 elif page == "Models":
     st.title("Select Models for Analysis")
-    
-    # Test connection first
     connection_status = test_connection()
     if connection_status.get('status') == 'error':
         st.error(f"Connection error: {connection_status.get('message')}")
@@ -779,11 +759,9 @@ elif page == "Models":
     else:
         with st.spinner("Fetching models..."):
             models = fetch_models()
-        
         if not models:
             st.warning("No models found or connection failed.")
         else:
-            # Organize models by provider
             providers = {
                 'Ollama - Offline': [],
                 'Anthropic': [],
@@ -794,9 +772,8 @@ elif page == "Models":
                 'Other': []
             }
             
-            for model in models:
-                model_name = model['name'].lower()
-                if 'google' in model_name or 'gemini' in model_name:
+            for model in models: model_name = model['name'].lower() if 'google' in model_name or 'gemini' in 
+                model_name:
                     providers['Google'].append(model)
                 elif 'anthropic' in model_name or 'claude' in model_name:
                     providers['Anthropic'].append(model)
@@ -810,26 +787,16 @@ elif page == "Models":
                     providers['Mistral'].append(model)
                 else:
                     providers['Other'].append(model)
-            
-            # Load currently selected models
             selected_models = load_selected_models()
             all_model_ids = [model['id'] for model in models]
-            
-            # Create tabs for each provider
             provider_tabs = st.tabs(list(providers.keys()))
-            
-            # Dictionary to store selected models from each tab
             tab_selections = {}
-            
-            # Dictionary to store model names for display
             model_id_to_name = {model['id']: model['name'] for model in models}
-            
             for i, (provider, provider_models) in enumerate(providers.items()):
                 with provider_tabs[i]:
                     if not provider_models:
                         st.info(f"No {provider} models available.")
                     else:
-                        # Create a DataFrame for better display
                         model_data = []
                         for model in provider_models:
                             model_data.append({
@@ -839,10 +806,7 @@ elif page == "Models":
                                 'Parameters': model.get('details', {}).get('parameter_size', 'Unknown'),
                                 'Selected': model['id'] in selected_models
                             })
-                        
                         df = pd.DataFrame(model_data)
-                        
-                        # Use an editable data grid for selection
                         edited_df = st.data_editor(
                             df,
                             column_config={
@@ -855,59 +819,39 @@ elif page == "Models":
                             hide_index=True,
                             use_container_width=True
                         )
-                        
-                        # Store selections for this tab
                         tab_selections[provider] = [
                             row['ID'] for _, row in edited_df.iterrows() if row['Selected']
                         ]
-            
-            # Display currently selected models from all tabs
             st.divider()
             st.subheader("Currently Selected Models")
-            
-            # Combine all current selections
             current_selections = []
             for selections in tab_selections.values():
                 current_selections.extend(selections)
-            
-            # Display in a nice table
             if current_selections:
                 selected_data = []
                 for model_id in current_selections:
-                    # Find the provider for this model
                     provider = "Unknown"
                     for prov, models_list in providers.items():
                         if any(model['id'] == model_id for model in models_list):
                             provider = prov
                             break
-                    
                     selected_data.append({
                         "Model ID": model_id,
                         "Model Name": model_id_to_name.get(model_id, "Unknown"),
                         "Provider": provider
                     })
-                
-                # Sort by provider and then by name
                 selected_data.sort(key=lambda x: (x["Provider"], x["Model Name"]))
-                
-                # Display as a DataFrame
                 st.dataframe(
                     pd.DataFrame(selected_data),
                     use_container_width=True,
                     hide_index=True
                 )
-                
-                # Show count
                 st.info(f"Total selected models: {len(current_selections)}")
             else:
                 st.info("No models currently selected.")
-            
-            # Save button
             if st.button("Save Selected Models"):
                 save_to_yaml(current_selections)
                 st.success(f"Selected {len(current_selections)} model(s) successfully!")
-                
-                # Display the list of saved models
                 if current_selections:
                     st.write("Saved models:")
                     for model_id in current_selections:
@@ -916,25 +860,22 @@ elif page == "Models":
 # --- SELECT COMPARATOR PAGE ---
 elif page == "Select Comparator":
     st.title("Select Comparator Model")
-    
+
     with st.spinner("Fetching models..."):
         models = fetch_models()
-    
     if not models:
         st.warning("No models found or connection failed.")
     else:
         current_config = load_analysis_config()
         selected_model = current_config.get('analysis_model', None)
-        
+
         model_options = [model['id'] for model in models]
         model_options.sort()
-        
         new_selected_model = st.selectbox(
             "Select a model for analysis comparison",
             model_options,
             index=model_options.index(selected_model) if selected_model in model_options else 0
         )
-        
         if st.button("Save Selection"):
             save_analysis_model(new_selected_model)
             st.success(f"Selected '{new_selected_model}' as the comparator model!")
@@ -942,17 +883,10 @@ elif page == "Select Comparator":
 # --- CONFIGURATION PAGE ---
 elif page == "Configuration":
     st.title("Configuration")
-    
-    # Load all configurations
     all_configs = load_all_configs(config_file)
     config_names = [c['name'] for c in all_configs] if all_configs else []
-    
-    # Add a button to create a new configuration
     if st.button("➕ Add New Configuration"):
-        # Set a session state flag to show the new configuration form
         st.session_state.show_new_config_form = True
-    
-    # Show new configuration form if the button was clicked
     if st.session_state.get('show_new_config_form', False):
         st.subheader("Add New Configuration")
         with st.form("new_config_form"):
@@ -960,14 +894,12 @@ elif page == "Configuration":
             new_api_key = st.text_input("API Key", type="password")
             new_location = st.text_input("API Location")
             submit_button = st.form_submit_button("Save New Configuration")
-            
             if submit_button:
                 if not new_config_name:
                     st.error("Configuration name is required")
                 elif new_config_name in config_names:
                     st.error(f"A configuration named '{new_config_name}' already exists")
                 else:
-                    # Create new configuration
                     new_config = {
                         'name': new_config_name,
                         'active': True,  # Mark as active
@@ -976,62 +908,39 @@ elif page == "Configuration":
                             'location': new_location
                         }
                     }
-                    
-                    # Set all other configs to inactive
                     for config in all_configs:
                         config['active'] = False
-                    
                     all_configs.append(new_config)
                     save_all_configs(all_configs, config_file)
                     st.session_state.selected_config_name = new_config_name
-                    
-                    # Clear the form flag
                     st.session_state.show_new_config_form = False
-                    
                     st.success("Configuration added successfully!")
                     st.rerun()
-    
-    # Display existing configurations if any
     if config_names:
         st.subheader("Existing Configurations")
-        
-        # Use session state for selection
         selected_config_name = st.selectbox(
             "Choose Configuration", 
             config_names, 
             index=config_names.index(st.session_state.selected_config_name) if st.session_state.selected_config_name in config_names else 0
         )
-        
-        # Update session state when selection changes
         if selected_config_name != st.session_state.selected_config_name:
             st.session_state.selected_config_name = selected_config_name
-            
-            # Mark this configuration as active in the file
             for config in all_configs:
                 config['active'] = (config.get('name') == selected_config_name)
             save_all_configs(all_configs, config_file)
-            
             st.rerun()
-            
-        # Get the selected configuration
         config = next((c for c in all_configs if c['name'] == selected_config_name), None)
-        
         if config is None:
             st.error("Selected configuration not found.")
         else:
-            # Initialize open_webui if it doesn't exist
             if 'open_webui' not in config:
                 config['open_webui'] = {'api_key': '', 'location': ''}
-            
             api_key = config.get('open_webui', {}).get('api_key', '')
             location = config.get('open_webui', {}).get('location', '')
-            
-            # Edit form for the selected configuration
             with st.form("edit_config_form"):
                 st.subheader(f"Edit Configuration: {selected_config_name}")
                 new_api_key = st.text_input("API Key", value=api_key, type="password")
                 new_location = st.text_input("API Location", value=location)
-                
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     submit_button = st.form_submit_button("Save Changes")
@@ -1039,9 +948,7 @@ elif page == "Configuration":
                     test_button = st.form_submit_button("Test Connection")
                 with col3:
                     delete_button = st.form_submit_button("Delete Configuration", type="secondary")
-                
                 if test_button:
-                    # Test the connection with updated settings
                     test_result = test_connection()
                     if test_result.get('status') == 'success':
                         st.success(test_result.get('message'))
@@ -1049,60 +956,43 @@ elif page == "Configuration":
                         st.error(test_result.get('message'))
 
                 if submit_button:
-                    # Update the current configuration
                     if 'open_webui' not in config:
                         config['open_webui'] = {}
                     config['open_webui']['api_key'] = new_api_key
                     config['open_webui']['location'] = new_location
-                    
-                    # Find the index of the config to update
                     for i, cfg in enumerate(all_configs):
                         if cfg.get('name') == selected_config_name:
                             all_configs[i] = config
-                            # Ensure this config is marked as active
                             all_configs[i]['active'] = True
                         else:
-                            # Set all other configs to inactive
                             all_configs[i]['active'] = False
-                    
-                    # Save changes back to the file
                     save_all_configs(all_configs, config_file)
                     st.success("Configuration saved successfully!")
-                    
-                    # Test the connection with updated settings
                     test_result = test_connection()
                     if test_result.get('status') == 'success':
                         st.success(test_result.get('message'))
                     else:
                         st.error(test_result.get('message'))
-                
                 if delete_button:
                     if len(all_configs) <= 1:
                         st.error("Cannot delete the only configuration. Please add another configuration first.")
                     else:
-                        # Remove the selected configuration
                         all_configs = [cfg for cfg in all_configs if cfg.get('name') != selected_config_name]
-                        
-                        # Mark the first remaining config as active
                         if all_configs:
                             all_configs[0]['active'] = True
                             st.session_state.selected_config_name = all_configs[0].get('name')
                         else:
                             st.session_state.selected_config_name = None
-                        
-                        # Save changes back to the file
                         save_all_configs(all_configs, config_file)
                         st.success(f"Configuration '{selected_config_name}' deleted successfully!")
                         st.rerun()
     else:
-        # No configurations exist yet, show the initial form
         st.info("No configurations available. Please add one.")
         with st.form("initial_config_form"):
             new_config_name = st.text_input("New Configuration Name")
             new_api_key = st.text_input("API Key", type="password")
             new_location = st.text_input("API Location")
             submit_button = st.form_submit_button("Add Configuration")
-            
             if submit_button:
                 if not new_config_name:
                     st.error("Configuration name is required")
@@ -1124,44 +1014,32 @@ elif page == "Configuration":
 # ANALYSIS
 elif page == "View Analysis":
     st.title("View Analysis Results")
-    
-    # Create analysis directory if it doesn't exist
     analysis_dir = './analysis'
     os.makedirs(analysis_dir, exist_ok=True)
-    
-    # Define file collections for HTML, MD, and JSON
     html_files = []
     download_files = []
     all_analysis_files = []
 
-    # Collect files for display/download
     for file in os.listdir(analysis_dir):
         file_path = os.path.join(analysis_dir, file)
-        
         if file.endswith('.html'):
-            # Add HTML files for viewing
             html_files.append({
                 'name': file,
                 'path': file_path,
                 'modified': os.path.getmtime(file_path),
             })
             all_analysis_files.append(file_path)
-        
         elif file.endswith(('.md', '.json')):
-            # Add Markdown and JSON files for download
             download_files.append({
                 'name': file,
                 'path': file_path,
                 'modified': os.path.getmtime(file_path),
             })
             all_analysis_files.append(file_path)
-        
-    # Sort files 
     html_files.sort(key=lambda x: x['name'], reverse=True)
     download_files.sort(key=lambda x: x['name'], reverse=True)
     all_analysis_files.sort(key=str.lower)
-    
-    # Display HTML files with rendering
+
     if not html_files:
         st.info("No HTML analysis files found.")
     else:
@@ -1176,15 +1054,13 @@ elif page == "View Analysis":
                     file_name=file['name'],
                     mime='text/html'
                 )
-    
-    # Display available download files (MD and JSON)
+
     if download_files:
         st.subheader("Available Downloads")
         for file in download_files:
             file_extension = file['name'].split('.')[-1]
             with open(file['path'], 'rb') as f:
                 file_bytes = f.read()
-            
             st.download_button(
                 label=f"Download {file_extension.upper()} - {file['name']}",
                 data=file_bytes,
@@ -1194,13 +1070,10 @@ elif page == "View Analysis":
 
 elif page == "Manage Analysis Files":
     st.title("Analysis Files Management")
-    # Create analysis directory if it doesn't exist
     analysis_dir = './analysis'
     os.makedirs(analysis_dir, exist_ok=True)
-    # Define file collections for HTML, MD, and JSON
     download_files = []
     all_analysis_files = []
-    # Collect files for display/download
     for file in os.listdir(analysis_dir):
         file_path = os.path.join(analysis_dir, file)
         download_files.append({
@@ -1209,11 +1082,9 @@ elif page == "Manage Analysis Files":
             'modified': os.path.getmtime(file_path),
         })
         all_analysis_files.append(file_path)
-    # Sort files
     download_files.sort(key=lambda x: x['name'], reverse=True)
     all_analysis_files.sort(key=str.lower)
     st.subheader("Delete files")
-    # Get all file names for selection
     all_file_names = [os.path.basename(path) for path in all_analysis_files]
     if all_file_names:
         files_to_delete = st.multiselect("Select files to delete", all_file_names)
@@ -1227,11 +1098,8 @@ elif page == "Manage Analysis Files":
             st.success(f"Successfully deleted {deleted_count} file(s). Refresh the page to see changes.")
     st.divider()
     st.subheader("Download files")
-    
-    # Adjust number of columns accordingly to your layout
     num_columns = 4
     columns = st.columns(num_columns)
-    
     for idx, file in enumerate(download_files):
         file_extension = file['name'].split('.')[-1]
         with open(file['path'], 'rb') as f:
