@@ -772,8 +772,9 @@ elif page == "Models":
                 'Other': []
             }
             
-            for model in models: model_name = model['name'].lower() if 'google' in model_name or 'gemini' in 
-                model_name:
+            for model in models:
+                model_name = model['name'].lower()
+                if 'google' in model_name or 'gemini' in model_name:
                     providers['Google'].append(model)
                 elif 'anthropic' in model_name or 'claude' in model_name:
                     providers['Anthropic'].append(model)
