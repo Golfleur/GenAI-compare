@@ -3,40 +3,9 @@ import yaml
 import json
 import os
 import argparse
+from config_utils import get_api_credentials
 
 MODELS_SUPPORTING_CITATIONS = ["perplexity", "claude"]
-
-def load_connect_owui(file_path):
-    """Load the configuration file and return the active configuration"""
-    try:
-        with open(file_path, 'r', encoding="utf-8") as file:
-            config_data = yaml.safe_load(file)
-        
-        # Check if the file contains the configs list structure
-        if isinstance(config_data, dict) and 'configs' in config_data:
-            configs = config_data.get('configs', [])
-            
-            # Look for active configuration
-            for config in configs:
-                if config.get('active', False):
-                    print(f"Using active configuration: {config.get('name', 'Unnamed')}")
-                    return config
-            
-            # If no active config is marked, return the first one
-            if configs:
-                print(f"Using default configuration: {configs[0].get('name', 'Unnamed')}")
-                return configs[0]
-            
-            print("No configurations found in the config file")
-            return {}
-        else:
-            # Handle old format for backward compatibility
-            print("Using legacy config format")
-            return config_data
-            
-    except Exception as e:
-        print(f"Error loading configuration: {e}")
-        return {}
 
 # Constants
 CONFIG_PATH = './config/config.yaml'
@@ -412,18 +381,14 @@ def main():
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
     args = parser.parse_args()
     
-    # Load the configuration
-    config = load_connect_owui('./config/connect-owui.yaml')
+    # Get API credentials using shared utility function
+    API_KEY, BASE_URL = get_api_credentials(verbose=args.verbose)
     
-    # Extract API credentials from the selected configuration
-    if 'open_webui' in config:
-        API_KEY = config['open_webui'].get('api_key', '')
-        BASE_URL = config['open_webui'].get('location', '')
-    else:
-        print("Warning: Invalid configuration format. Missing 'open_webui' section.")
-        API_KEY = ''
-        BASE_URL = ''
-    
+    # Validate that we have credentials from either source
+    if not API_KEY or not BASE_URL:
+        print("Error: API credentials not found. Please set OPENWEBUI_API_KEY and OPENWEBUI_BASE_URL")
+        print("environment variables, or configure them in ./config/connect-owui.yaml")
+        return
     
     # Process all questions
     process_question_files(args.verbose, API_KEY, BASE_URL)
