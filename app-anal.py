@@ -6,10 +6,7 @@ import yaml
 import re
 import datetime
 from pathlib import Path
-from dotenv import load_dotenv
-
-# Load environment variables from .env file if it exists
-load_dotenv()
+from config_utils import get_api_credentials
 
 THINK_MARKER_TO_BE_IGNORED = True
 DO_NOT_ADD_A_SYSTEM_PROMPT = True
@@ -24,38 +21,6 @@ def get_color_for_score(score):
         return "#f39c12"  # Orange/Yellow
     else:
         return "#2ecc71"  # Green
-
-def load_connect_owui(file_path):
-    """Load the configuration file and return the active configuration.
-    
-    Environment variables take precedence over YAML configuration:
-    - OPENWEBUI_API_KEY: API key for Open WebUI
-    - OPENWEBUI_BASE_URL: Base URL for Open WebUI API
-    """
-    try:
-        with open(file_path, 'r', encoding="utf-8") as file:
-            config_data = yaml.safe_load(file)
-        # Check if the file contains the configs list structure
-        if isinstance(config_data, dict) and 'configs' in config_data:
-            # Look for active configuration
-            configs = config_data.get('configs', [])
-            for config in configs:
-                if config.get('active', False):
-                    print(f"Using active configuration: {config.get('name', 'Unnamed')}")
-                    return config
-            # If no active config is marked, return the first one
-            if configs:
-                print(f"Using default configuration: {configs[0].get('name', 'Unnamed')}")
-                return configs[0]
-            print("No configurations found in the config file")
-            return {}
-        else:
-            # Handle old format for backward compatibility
-            print("Using legacy config format")
-            return config_data
-    except Exception as e:
-        print(f"Error loading configuration: {e}")
-        return {}
 
 def load_config():
     """Load existing configuration from the YAML file."""
@@ -81,23 +46,8 @@ def read_json_file(file_path):
         return json.load(file)
 
 def get_analysis_response(question, candidate_answer, target_answer, infos_cruciales, infos_a_eviter, analysis_model, verbose):
-    # Check for environment variables first (takes precedence)
-    API_KEY = os.getenv('OPENWEBUI_API_KEY')
-    BASE_URL = os.getenv('OPENWEBUI_BASE_URL')
-    
-    if API_KEY and BASE_URL:
-        if verbose:
-            print("Using API credentials from environment variables for analysis")
-    else:
-        # Fall back to configuration file
-        config = load_connect_owui('./config/connect-owui.yaml')
-        # Extract API credentials from the selected configuration
-        if 'open_webui' in config:
-            API_KEY = config['open_webui'].get('api_key', '')
-            BASE_URL = config['open_webui'].get('location', '')
-        else:
-            print("Warning: Invalid configuration format. Missing 'open_webui' section.")
-            return "Error: Invalid configuration format"
+    # Get API credentials using shared utility function
+    API_KEY, BASE_URL = get_api_credentials(verbose=verbose)
     
     # Validate credentials
     if not API_KEY or not BASE_URL:
