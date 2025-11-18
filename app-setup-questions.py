@@ -327,17 +327,19 @@ def load_refinement_config():
                 return config.get('refinement', {
                     'enabled': False,
                     'model': None,
-                    'prompt_template': "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer."
+                    'prompt_template': "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer.",
+                    'analyze_both': True
                 })
             except yaml.YAMLError:
                 print("Error reading YAML configuration")
     return {
         'enabled': False,
         'model': None,
-        'prompt_template': "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer."
+        'prompt_template': "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer.",
+        'analyze_both': True
     }
 
-def save_refinement_config(enabled, model, prompt_template):
+def save_refinement_config(enabled, model, prompt_template, analyze_both):
     """Save refinement configuration to config file."""
     current_config = {}
     if os.path.exists(CONFIG_PATH_):
@@ -350,7 +352,8 @@ def save_refinement_config(enabled, model, prompt_template):
     current_config['refinement'] = {
         'enabled': enabled,
         'model': model,
-        'prompt_template': prompt_template
+        'prompt_template': prompt_template,
+        'analyze_both': analyze_both
     }
     
     with open(CONFIG_PATH_, 'w', encoding="utf-8") as file:
@@ -972,6 +975,19 @@ elif page == "Answer Refinement":
             
             st.info(f"💡 Tip: You can use the same or a different model for refinement. A more powerful model often provides better refinements.")
         
+        # Option to analyze both initial and refined answers
+        st.subheader("Analysis Options")
+        analyze_both = st.checkbox(
+            "Analyze both initial and refined answers",
+            value=refinement_config.get('analyze_both', True),
+            help="When enabled, both the initial answer and the refined answer will be saved and analyzed separately, allowing comparison of improvement."
+        )
+        
+        if analyze_both:
+            st.success("✓ Both initial and refined answers will be analyzed. This allows you to see the improvement from refinement.")
+        else:
+            st.info("Only the refined answer will be analyzed. The initial answer will be stored in metadata but not separately analyzed.")
+        
         # Refinement prompt template
         st.subheader("Refinement Prompt Template")
         st.markdown("""
@@ -995,6 +1011,7 @@ elif page == "Answer Refinement":
             st.warning("⚠️ Warning: Your prompt template should include both {question} and {initial_answer} placeholders.")
     else:
         refinement_model = None
+        analyze_both = True
         prompt_template = refinement_config.get('prompt_template', 
             "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer.")
         st.info("Refinement is currently disabled. Answers will be generated directly without refinement.")
@@ -1005,7 +1022,7 @@ elif page == "Answer Refinement":
         if enabled and not refinement_model:
             st.error("Please select a refinement model when refinement is enabled.")
         else:
-            save_refinement_config(enabled, refinement_model, prompt_template)
+            save_refinement_config(enabled, refinement_model, prompt_template, analyze_both)
             st.success("Refinement configuration saved successfully!")
             
             # Display summary
@@ -1013,6 +1030,7 @@ elif page == "Answer Refinement":
             st.write(f"**Refinement Enabled:** {'Yes' if enabled else 'No'}")
             if enabled and refinement_model:
                 st.write(f"**Refinement Model:** {refinement_model}")
+                st.write(f"**Analyze Both Initial and Refined:** {'Yes' if analyze_both else 'No (only refined)'}")
                 with st.expander("View Prompt Template"):
                     st.code(prompt_template)
 

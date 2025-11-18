@@ -55,11 +55,12 @@ def load_refinement_config():
             'enabled': refinement_config.get('enabled', False),
             'model': refinement_config.get('model', None),
             'prompt_template': refinement_config.get('prompt_template', 
-                "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer.")
+                "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer."),
+            'analyze_both': refinement_config.get('analyze_both', True)  # New option to analyze both initial and refined
         }
     except Exception as e:
         print(f"Error loading refinement config: {e}")
-        return {'enabled': False, 'model': None, 'prompt_template': None}
+        return {'enabled': False, 'model': None, 'prompt_template': None, 'analyze_both': True}
 
 def load_models(config_path, verbose):
     """Load model names from a YAML configuration file."""
@@ -310,17 +311,44 @@ def process_question_files(verbose, api_key, base_url):
                             )
                             
                             if refined_answer is not None:
-                                # Store both initial and refined answers
-                                final_answer = refined_answer
-                                # Add metadata to track refinement
-                                final_answer['refinement_metadata'] = {
-                                    'initial_answer': initial_answer['choices'][0]['message']['content'],
-                                    'refinement_model': refinement_config['model'],
-                                    'was_refined': True
-                                }
-                                if verbose:
-                                    print("*-*-*-*-*-*-*-*-*")
-                                    print(f"Successfully refined answer for question {q}/{n_questions}")
+                                # Store both initial and refined answers based on configuration
+                                if refinement_config.get('analyze_both', True):
+                                    # Save BOTH initial and refined answers with different keys
+                                    # Initial answer
+                                    initial_answer_copy = initial_answer.copy()
+                                    initial_answer_copy['refinement_metadata'] = {
+                                        'is_initial': True,
+                                        'has_refined_version': True,
+                                        'refinement_model': refinement_config['model']
+                                    }
+                                    existing_answers[f"{model_name} (initial)"] = initial_answer_copy
+                                    
+                                    # Refined answer
+                                    final_answer = refined_answer
+                                    final_answer['refinement_metadata'] = {
+                                        'initial_answer': initial_answer['choices'][0]['message']['content'],
+                                        'refinement_model': refinement_config['model'],
+                                        'was_refined': True,
+                                        'is_refined_version': True
+                                    }
+                                    existing_answers[f"{model_name} (refined)"] = final_answer
+                                    
+                                    if verbose:
+                                        print("*-*-*-*-*-*-*-*-*")
+                                        print(f"Saved BOTH initial and refined answers for question {q}/{n_questions}")
+                                else:
+                                    # Save ONLY the refined answer (original behavior)
+                                    final_answer = refined_answer
+                                    final_answer['refinement_metadata'] = {
+                                        'initial_answer': initial_answer['choices'][0]['message']['content'],
+                                        'refinement_model': refinement_config['model'],
+                                        'was_refined': True
+                                    }
+                                    existing_answers[model_name] = final_answer
+                                    
+                                    if verbose:
+                                        print("*-*-*-*-*-*-*-*-*")
+                                        print(f"Successfully refined answer for question {q}/{n_questions}")
                             else:
                                 print(f"Warning: Refinement failed for question {q}-'{q_file}', using initial answer")
                                 # Add metadata to indicate refinement was attempted but failed
@@ -329,14 +357,15 @@ def process_question_files(verbose, api_key, base_url):
                                     'refinement_attempted': True,
                                     'refinement_model': refinement_config['model']
                                 }
+                                existing_answers[model_name] = final_answer
                         else:
                             # Add metadata to indicate no refinement was used
                             final_answer['refinement_metadata'] = {
                                 'was_refined': False,
                                 'refinement_attempted': False
                             }
+                            existing_answers[model_name] = final_answer
                         
-                        existing_answers[model_name] = final_answer
                         if verbose:
                             print("*-*-*-*-*-*-*-*-*")
                             print(f"Saving answers for question {q}/{n_questions}-'{q_file}' with model {n}/{n_models}-'{model_name}'")
