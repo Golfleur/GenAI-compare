@@ -458,6 +458,12 @@ def main(verbose=False):
                 if verbose:
                     print("*-*-*-*-*-*-*-*-*")
                     print(f"Processing response from model {n}/{n_models}-{model} for question {q}/{n_questions}-{base_name}")
+                
+                # Check if this is an initial or refined answer
+                is_initial = '(initial)' in model.lower()
+                is_refined = '(refined)' in model.lower()
+                refinement_metadata = model_data.get('refinement_metadata', {})
+                
                 answer_text = model_data['choices'][0]['message']['content']
                 if 'created' in model_data:
                     answer_date_unix = model_data['created']
@@ -537,14 +543,28 @@ def main(verbose=False):
                             model_performance[model]["weaknesses"][weakness] = model_performance[model]["weaknesses"].get(weakness, 0) + 1
                 
                 # Add to model responses in JSON
-                question_data["model_responses"].append({
+                response_entry = {
                     "model_name": model,
                     "response_date": answer_date,
                     "response_text": answer_text,
                     "analysis": api_response
-                })
+                }
+                
+                # Add refinement metadata if available
+                if is_initial or is_refined:
+                    response_entry["answer_type"] = "initial" if is_initial else "refined"
+                if refinement_metadata:
+                    response_entry["refinement_metadata"] = refinement_metadata
+                
+                question_data["model_responses"].append(response_entry)
                 # Add to markdown report
                 md_report += f"### Model: {model}\n\n"
+                if is_initial:
+                    md_report += f"**Type:** Initial Answer (before refinement)\n\n"
+                elif is_refined:
+                    md_report += f"**Type:** Refined Answer\n\n"
+                    if refinement_metadata.get('refinement_model'):
+                        md_report += f"**Refined by:** {refinement_metadata['refinement_model']}\n\n"
                 md_report += f"**Response Date:** {answer_date}\n\n"
                 md_report += f"#### Response\n\n"
                 md_report += f"```\n{answer_text}\n```\n\n"
@@ -552,10 +572,21 @@ def main(verbose=False):
                 md_report += f"```\n{api_response}\n```\n\n"
                 md_report += f"---\n\n"
                 # Add to HTML report
+                answer_type_badge = ""
+                if is_initial:
+                    answer_type_badge = '<span style="background-color: #3498db; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.85em; margin-left: 10px;">Initial Answer</span>'
+                elif is_refined:
+                    answer_type_badge = '<span style="background-color: #2ecc71; color: white; padding: 3px 8px; border-radius: 3px; font-size: 0.85em; margin-left: 10px;">Refined Answer</span>'
+                
+                refinement_info = ""
+                if is_refined and refinement_metadata.get('refinement_model'):
+                    refinement_info = f'<p style="color: #7f8c8d; font-size: 0.9em;"><em>Refined by: {refinement_metadata["refinement_model"]}</em></p>'
+                
                 html_report += f"""
                 <div class="question-card">
-                    <h3>Model: {model}</h3>
+                    <h3>Model: {model} {answer_type_badge}</h3>
                     <p><strong>Response Date:</strong> {answer_date}</p>
+                    {refinement_info}
                     <h4>Response</h4>
                     <div class="model-response">
                         <pre>{answer_text}</pre>

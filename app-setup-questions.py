@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-CONFIG_PATH_ = './config/config.yaml'
+CONFIG_PATH = './config/config.yaml'
 config_file = './config/connect-owui.yaml'
 
 os.makedirs('./questions', exist_ok=True)
@@ -53,7 +53,7 @@ if all_configs:
         else:
             config_names.append(f"Invalid config: {str(c)[:20]}")
 current_config_index = 0
-config = all_configs[current_config_index] if all_configs and all_configs else {}
+config = all_configs[current_config_index] if all_configs else {}
 
 API_KEY = config.get('open_webui', {}).get('api_key', '')
 BASE_URL = config.get('open_webui', {}).get('location', '')
@@ -292,8 +292,8 @@ def fetch_models():
         return []
 
 def load_analysis_config():
-    if os.path.exists(CONFIG_PATH_):
-        with open(CONFIG_PATH_, 'r', encoding="utf-8") as file:
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
             try:
                 return yaml.safe_load(file) or {}
             except yaml.YAMLError:
@@ -304,12 +304,12 @@ def load_analysis_config():
 def save_analysis_model(selected_model):
     current_config = load_analysis_config()
     current_config['analysis_model'] = selected_model
-    with open(CONFIG_PATH_, 'w', encoding="utf-8") as file:
+    with open(CONFIG_PATH, 'w', encoding="utf-8") as file:
         yaml.dump(current_config, file)
 
 def load_selected_models():
-    if os.path.exists(CONFIG_PATH_):
-        with open(CONFIG_PATH_, 'r', encoding="utf-8") as file:
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
             try:
                 config = yaml.safe_load(file)
                 return config.get("selected_models", [])
@@ -318,7 +318,29 @@ def load_selected_models():
                 return []
     return []
 
-def save_to_yaml(selected_models):
+def load_refinement_config():
+    """Load refinement configuration from config file."""
+    if os.path.exists(CONFIG_PATH_):
+        with open(CONFIG_PATH_, 'r', encoding="utf-8") as file:
+            try:
+                config = yaml.safe_load(file) or {}
+                return config.get('refinement', {
+                    'enabled': False,
+                    'model': None,
+                    'prompt_template': "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer.",
+                    'analyze_both': True
+                })
+            except yaml.YAMLError:
+                print("Error reading YAML configuration")
+    return {
+        'enabled': False,
+        'model': None,
+        'prompt_template': "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer.",
+        'analyze_both': True
+    }
+
+def save_refinement_config(enabled, model, prompt_template, analyze_both):
+    """Save refinement configuration to config file."""
     current_config = {}
     if os.path.exists(CONFIG_PATH_):
         with open(CONFIG_PATH_, 'r', encoding="utf-8") as file:
@@ -326,8 +348,27 @@ def save_to_yaml(selected_models):
                 current_config = yaml.safe_load(file) or {}
             except yaml.YAMLError:
                 print("Error reading YAML configuration")
-    current_config['selected_models'] = selected_models
+    
+    current_config['refinement'] = {
+        'enabled': enabled,
+        'model': model,
+        'prompt_template': prompt_template,
+        'analyze_both': analyze_both
+    }
+    
     with open(CONFIG_PATH_, 'w', encoding="utf-8") as file:
+        yaml.dump(current_config, file)
+
+def save_to_yaml(selected_models):
+    current_config = {}
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
+            try:
+                current_config = yaml.safe_load(file) or {}
+            except yaml.YAMLError:
+                print("Error reading YAML configuration")
+    current_config['selected_models'] = selected_models
+    with open(CONFIG_PATH, 'w', encoding="utf-8") as file:
         yaml.dump(current_config, file)
 
 # Sidebar navigation
@@ -340,7 +381,7 @@ else:
 page = st.sidebar.radio(
     "Choose a page",
     ["Perform comparison", "Add Question", "View Questions", "Edit Questions", "Delete Questions",
-     "Select Questions", "Manage Question Categories", "Manual Entry", "Models", "Select Comparator", "Configuration", "View Analysis","Manage Analysis Files"]
+     "Select Questions", "Manage Question Categories", "Manual Entry", "Models", "Select Comparator", "Answer Refinement", "Configuration", "View Analysis","Manage Analysis Files"]
 )
 # --- HOME PAGE ---
 if page == "Perform comparison":
@@ -880,6 +921,118 @@ elif page == "Select Comparator":
         if st.button("Save Selection"):
             save_analysis_model(new_selected_model)
             st.success(f"Selected '{new_selected_model}' as the comparator model!")
+
+# --- ANSWER REFINEMENT PAGE ---
+elif page == "Answer Refinement":
+    st.title("Answer Refinement Configuration")
+    
+    st.markdown("""
+    ### Two-Stage Answer Generation
+    
+    Enable this feature to have answers refined before they are analyzed. When enabled:
+    1. **Stage 1**: Each selected model generates an initial answer to the question
+    2. **Stage 2**: A refinement model reviews and improves the initial answer
+    3. **Analysis**: The refined answer is what gets rated and analyzed
+    
+    This can improve answer quality by allowing a specialized model to refine responses.
+    """)
+    
+    # Load current refinement configuration
+    refinement_config = load_refinement_config()
+    
+    # Enable/Disable refinement
+    st.subheader("Enable Refinement")
+    enabled = st.checkbox(
+        "Enable two-stage answer refinement",
+        value=refinement_config.get('enabled', False),
+        help="When enabled, all answers will be refined by a secondary model before analysis"
+    )
+    
+    if enabled:
+        st.info("⚠️ Note: Enabling refinement will approximately double the number of API calls and processing time.")
+        
+        # Select refinement model
+        st.subheader("Refinement Model")
+        with st.spinner("Fetching available models..."):
+            models = fetch_models()
+        
+        if not models:
+            st.warning("No models found or connection failed. Please check your configuration.")
+            refinement_model = None
+        else:
+            model_options = [model['id'] for model in models]
+            model_options.sort()
+            
+            current_model = refinement_config.get('model')
+            default_index = model_options.index(current_model) if current_model in model_options else 0
+            
+            refinement_model = st.selectbox(
+                "Select model for refinement",
+                model_options,
+                index=default_index,
+                help="This model will refine the initial answers. Consider using a powerful model like GPT-4 or Claude."
+            )
+            
+            st.info(f"💡 Tip: You can use the same or a different model for refinement. A more powerful model often provides better refinements.")
+        
+        # Option to analyze both initial and refined answers
+        st.subheader("Analysis Options")
+        analyze_both = st.checkbox(
+            "Analyze both initial and refined answers",
+            value=refinement_config.get('analyze_both', True),
+            help="When enabled, both the initial answer and the refined answer will be saved and analyzed separately, allowing comparison of improvement."
+        )
+        
+        if analyze_both:
+            st.success("✓ Both initial and refined answers will be analyzed. This allows you to see the improvement from refinement.")
+        else:
+            st.info("Only the refined answer will be analyzed. The initial answer will be stored in metadata but not separately analyzed.")
+        
+        # Refinement prompt template
+        st.subheader("Refinement Prompt Template")
+        st.markdown("""
+        Customize the prompt used for refinement. Available placeholders:
+        - `{question}` - The original question
+        - `{initial_answer}` - The initial answer from the first model
+        """)
+        
+        default_template = refinement_config.get('prompt_template', 
+            "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer.")
+        
+        prompt_template = st.text_area(
+            "Refinement prompt template",
+            value=default_template,
+            height=200,
+            help="The prompt sent to the refinement model. Use {question} and {initial_answer} as placeholders."
+        )
+        
+        # Validation
+        if "{question}" not in prompt_template or "{initial_answer}" not in prompt_template:
+            st.warning("⚠️ Warning: Your prompt template should include both {question} and {initial_answer} placeholders.")
+    else:
+        refinement_model = None
+        analyze_both = True
+        prompt_template = refinement_config.get('prompt_template', 
+            "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer.")
+        st.info("Refinement is currently disabled. Answers will be generated directly without refinement.")
+    
+    # Save button
+    st.divider()
+    if st.button("Save Refinement Configuration", type="primary"):
+        if enabled and not refinement_model:
+            st.error("Please select a refinement model when refinement is enabled.")
+        else:
+            save_refinement_config(enabled, refinement_model, prompt_template, analyze_both)
+            st.success("Refinement configuration saved successfully!")
+            
+            # Display summary
+            st.subheader("Current Configuration")
+            st.write(f"**Refinement Enabled:** {'Yes' if enabled else 'No'}")
+            if enabled and refinement_model:
+                st.write(f"**Refinement Model:** {refinement_model}")
+                st.write(f"**Analyze Both Initial and Refined:** {'Yes' if analyze_both else 'No (only refined)'}")
+                with st.expander("View Prompt Template"):
+                    st.code(prompt_template)
 
 # --- CONFIGURATION PAGE ---
 elif page == "Configuration":
