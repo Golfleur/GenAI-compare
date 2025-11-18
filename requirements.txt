@@ -5,3 +5,4 @@ requests
 pandas
 pathlib
 datetime
+python-dotenv
