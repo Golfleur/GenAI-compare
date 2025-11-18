@@ -1,7 +1,4 @@
 streamlit
 requests
 PyYAML
-requests
 pandas
-pathlib
-datetime

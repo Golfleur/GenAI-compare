@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-CONFIG_PATH_ = './config/config.yaml'
+CONFIG_PATH = './config/config.yaml'
 config_file = './config/connect-owui.yaml'
 
 os.makedirs('./questions', exist_ok=True)
@@ -53,7 +53,7 @@ if all_configs:
         else:
             config_names.append(f"Invalid config: {str(c)[:20]}")
 current_config_index = 0
-config = all_configs[current_config_index] if all_configs and all_configs else {}
+config = all_configs[current_config_index] if all_configs else {}
 
 API_KEY = config.get('open_webui', {}).get('api_key', '')
 BASE_URL = config.get('open_webui', {}).get('location', '')
@@ -292,8 +292,8 @@ def fetch_models():
         return []
 
 def load_analysis_config():
-    if os.path.exists(CONFIG_PATH_):
-        with open(CONFIG_PATH_, 'r', encoding="utf-8") as file:
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
             try:
                 return yaml.safe_load(file) or {}
             except yaml.YAMLError:
@@ -304,12 +304,12 @@ def load_analysis_config():
 def save_analysis_model(selected_model):
     current_config = load_analysis_config()
     current_config['analysis_model'] = selected_model
-    with open(CONFIG_PATH_, 'w', encoding="utf-8") as file:
+    with open(CONFIG_PATH, 'w', encoding="utf-8") as file:
         yaml.dump(current_config, file)
 
 def load_selected_models():
-    if os.path.exists(CONFIG_PATH_):
-        with open(CONFIG_PATH_, 'r', encoding="utf-8") as file:
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
             try:
                 config = yaml.safe_load(file)
                 return config.get("selected_models", [])
@@ -320,14 +320,14 @@ def load_selected_models():
 
 def save_to_yaml(selected_models):
     current_config = {}
-    if os.path.exists(CONFIG_PATH_):
-        with open(CONFIG_PATH_, 'r', encoding="utf-8") as file:
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
             try:
                 current_config = yaml.safe_load(file) or {}
             except yaml.YAMLError:
                 print("Error reading YAML configuration")
     current_config['selected_models'] = selected_models
-    with open(CONFIG_PATH_, 'w', encoding="utf-8") as file:
+    with open(CONFIG_PATH, 'w', encoding="utf-8") as file:
         yaml.dump(current_config, file)
 
 # Sidebar navigation
