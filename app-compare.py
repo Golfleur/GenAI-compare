@@ -45,6 +45,22 @@ ANSWERS_FOLDER = './answers'
 n_questions = 0
 n_models = 0
 
+def load_refinement_config():
+    """Load refinement configuration from config file."""
+    try:
+        with open(CONFIG_PATH, 'r', encoding="utf-8") as file:
+            config = yaml.safe_load(file)
+        refinement_config = config.get('refinement', {})
+        return {
+            'enabled': refinement_config.get('enabled', False),
+            'model': refinement_config.get('model', None),
+            'prompt_template': refinement_config.get('prompt_template', 
+                "Please review and refine the following answer to improve its accuracy, clarity, and completeness:\n\nOriginal Question: {question}\n\nInitial Answer: {initial_answer}\n\nPlease provide a refined version of this answer.")
+        }
+    except Exception as e:
+        print(f"Error loading refinement config: {e}")
+        return {'enabled': False, 'model': None, 'prompt_template': None}
+
 def load_models(config_path, verbose):
     """Load model names from a YAML configuration file."""
     try:
@@ -150,6 +166,34 @@ def generate_answer(question, model_name, verbose, api_key, base_url):
             
     return None
 
+def refine_answer(question, initial_answer, refinement_model, refinement_prompt_template, verbose, api_key, base_url):
+    """Refine an initial answer using a refinement model."""
+    if not initial_answer:
+        print("No initial answer to refine.")
+        return None
+    
+    # Extract the content from the initial answer
+    try:
+        initial_content = initial_answer['choices'][0]['message']['content']
+    except (KeyError, IndexError, TypeError) as e:
+        print(f"Error extracting initial answer content: {e}")
+        return None
+    
+    # Create the refinement prompt
+    refinement_prompt = refinement_prompt_template.format(
+        question=question,
+        initial_answer=initial_content
+    )
+    
+    if verbose:
+        print("*-*-*-*-*-*-*-*-*")
+        print(f"Refining answer with model: {refinement_model}")
+    
+    # Generate the refined answer
+    refined_response = generate_answer(refinement_prompt, refinement_model, verbose, api_key, base_url)
+    
+    return refined_response
+
 def write_answers(file_name, answers, verbose):
     """Write the collected answers to a specified file as JSON."""
     try:
@@ -178,6 +222,14 @@ def process_question_files(verbose, api_key, base_url):
         if verbose:
             print(f"YAML file not found or error reading YAML file: {e}. Defaulting to all questions.")
         selected_questions = None
+    
+    # Load refinement configuration
+    refinement_config = load_refinement_config()
+    if verbose:
+        print("*-*-*-*-*-*-*-*-*")
+        print(f"Refinement enabled: {refinement_config['enabled']}")
+        if refinement_config['enabled']:
+            print(f"Refinement model: {refinement_config['model']}")
         
     # Load models
     models = load_models(CONFIG_PATH, verbose)
@@ -233,11 +285,58 @@ def process_question_files(verbose, api_key, base_url):
                                 print(f"Loaded existing answers from other models for question {q}/{n_questions} from {output_file}")
                         except Exception as e:
                             print(f"Error loading existing answers from '{output_file}': {e}")
+                    
+                    # Generate initial answer
+                    initial_answer = generate_answer(question, model_name, verbose, api_key, base_url)
+                    
+                    if initial_answer is not None:
+                        # Determine the final answer (with or without refinement)
+                        final_answer = initial_answer
+                        
+                        # Apply refinement if enabled
+                        if refinement_config['enabled'] and refinement_config['model']:
+                            if verbose:
+                                print("*-*-*-*-*-*-*-*-*")
+                                print(f"Applying refinement for question {q}/{n_questions} with model {refinement_config['model']}")
                             
-                    # Generate and save new answer
-                    answer = generate_answer(question, model_name, verbose, api_key, base_url)
-                    if answer is not None:
-                        existing_answers[model_name] = answer
+                            refined_answer = refine_answer(
+                                question,
+                                initial_answer,
+                                refinement_config['model'],
+                                refinement_config['prompt_template'],
+                                verbose,
+                                api_key,
+                                base_url
+                            )
+                            
+                            if refined_answer is not None:
+                                # Store both initial and refined answers
+                                final_answer = refined_answer
+                                # Add metadata to track refinement
+                                final_answer['refinement_metadata'] = {
+                                    'initial_answer': initial_answer['choices'][0]['message']['content'],
+                                    'refinement_model': refinement_config['model'],
+                                    'was_refined': True
+                                }
+                                if verbose:
+                                    print("*-*-*-*-*-*-*-*-*")
+                                    print(f"Successfully refined answer for question {q}/{n_questions}")
+                            else:
+                                print(f"Warning: Refinement failed for question {q}-'{q_file}', using initial answer")
+                                # Add metadata to indicate refinement was attempted but failed
+                                final_answer['refinement_metadata'] = {
+                                    'was_refined': False,
+                                    'refinement_attempted': True,
+                                    'refinement_model': refinement_config['model']
+                                }
+                        else:
+                            # Add metadata to indicate no refinement was used
+                            final_answer['refinement_metadata'] = {
+                                'was_refined': False,
+                                'refinement_attempted': False
+                            }
+                        
+                        existing_answers[model_name] = final_answer
                         if verbose:
                             print("*-*-*-*-*-*-*-*-*")
                             print(f"Saving answers for question {q}/{n_questions}-'{q_file}' with model {n}/{n_models}-'{model_name}'")
